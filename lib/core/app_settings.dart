@@ -46,6 +46,7 @@ class AppSettings extends ChangeNotifier {
   static const String _regionAlertsKey = 'region_alerts_enabled';
   static const String _regionGranularityKey = 'region_alert_granularity';
   static const String _regionAlertLastKey = 'region_alert_last';
+  static const String _notificationsAskedKey = 'notifications_asked';
 
   final SharedPreferencesAsync _preferences;
 
@@ -56,6 +57,9 @@ class AppSettings extends ChangeNotifier {
   bool _regionAlertsEnabled = true;
   RegionGranularity _regionGranularity = RegionGranularity.city;
   String _regionAlertLast = '';
+
+  /// 是否已经申请过一次通知权限：只问一次，避免每次启动都弹窗。
+  bool _notificationsAsked = false;
 
   /// `null` 表示跟随系统语言。
   Locale? get locale => _locale;
@@ -75,6 +79,9 @@ class AppSettings extends ChangeNotifier {
   /// 上次记录的地区名，用来判断是否真的换了地方。
   String get regionAlertLast => _regionAlertLast;
 
+  /// 通知权限是否已经申请过（只申请一次）。
+  bool get notificationsAsked => _notificationsAsked;
+
   /// 读取已保存的设置；读取失败时保留默认值。
   Future<void> load() async {
     try {
@@ -88,6 +95,9 @@ class AppSettings extends ChangeNotifier {
       );
       final String? lastRegion = await _preferences.getString(
         _regionAlertLastKey,
+      );
+      final bool? notificationsAsked = await _preferences.getBool(
+        _notificationsAskedKey,
       );
       _locale = switch (language) {
         null || '' => null,
@@ -111,6 +121,7 @@ class AppSettings extends ChangeNotifier {
         orElse: () => RegionGranularity.city,
       );
       _regionAlertLast = lastRegion ?? '';
+      _notificationsAsked = notificationsAsked ?? false;
       notifyListeners();
     } on Exception {
       // 读取失败不阻塞启动，继续使用默认值。
@@ -174,6 +185,15 @@ class AppSettings extends ChangeNotifier {
     }
     _regionAlertLast = region;
     await _preferences.setString(_regionAlertLastKey, region);
+  }
+
+  /// 标记通知权限已经申请过，避免每次启动重复弹窗。
+  Future<void> setNotificationsAsked() async {
+    if (_notificationsAsked) {
+      return;
+    }
+    _notificationsAsked = true;
+    await _preferences.setBool(_notificationsAskedKey, true);
   }
 
   /// 设置明暗模式（跟随系统 / 浅色 / 深色）。

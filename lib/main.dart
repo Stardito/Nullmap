@@ -77,8 +77,12 @@ class _NullMapAppState extends State<NullMapApp> with WidgetsBindingObserver {
   Future<void> _boot() async {
     await _settings.load();
     await RegionAlerts.initialize();
-    // 启动就申请通知权限（Android 13+），否则后面发通知会被静默丢弃。
-    await RegionAlerts.requestPermission();
+    // 通知权限只申请一次（Android 13+）：拒绝后不再每次启动弹窗，
+    // 用户可以在系统设置里手动打开。否则后面发通知会被静默丢弃。
+    if (!_settings.notificationsAsked) {
+      await _settings.setNotificationsAsked();
+      await RegionAlerts.requestPermission();
+    }
     await _checkRegion();
   }
 

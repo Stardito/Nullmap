@@ -41,28 +41,9 @@ class MainActivity : FlutterActivity() {
             MapsInitializer.updatePrivacyShow(applicationContext, true, true)
             MapsInitializer.updatePrivacyAgree(applicationContext, true)
         }
-        // 首次启动就申请定位权限，而不是等地图第一次需要定位时才弹窗。
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            AmapPlatformView.lastPermissionRequestAt = System.currentTimeMillis()
-            requestPermissions(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
-                AmapPlatformView.REQ_LOCATION,
-            )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            // 前台定位已授权后再要「始终允许」，系统会弹一次权限页。
-            requestPermissions(
-                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                AmapPlatformView.REQ_BACKGROUND_LOCATION,
-            )
-        }
+        // 启动时不再主动申请定位：地图视图首次需要定位时才申请一次（见 AmapView.ensureLocation），
+        // 用户拒绝后也不会每次进 App 再弹窗。「始终允许」后台定位只在地区提醒的说明里提示，
+        // 因为地区检测只在回到前台时执行，不需要后台常驻权限。
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

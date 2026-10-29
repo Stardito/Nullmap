@@ -352,7 +352,8 @@ internal class AmapPlatformView(
             return "moved"
         }
         if (!hasLocationPermission()) {
-            requestPermission()
+            // 用户主动点了定位，这里可以再申请一次权限。
+            requestPermission(manual = true)
             return "permission"
         }
         startLocation()
@@ -436,15 +437,21 @@ internal class AmapPlatformView(
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
-    private fun requestPermission() {
+    private fun requestPermission(manual: Boolean = false) {
+        val activity = context as? Activity ?: return
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // 自动申请只做一次：用户拒绝过后，后续启动不再自动弹窗（点定位按钮仍可主动申请）。
+        if (!manual && prefs.getBoolean(KEY_PERMISSION_ASKED, false)) {
+            return
+        }
         val elapsed = System.currentTimeMillis() - lastPermissionRequestAt
         if (permissionRequested || elapsed < PERMISSION_REQUEST_DEBOUNCE_MS) {
             return
         }
-        val activity = context as? Activity ?: return
         permissionRequested = true
         lastPermissionRequestAt = System.currentTimeMillis()
-        Log.d(TAG, "request location permission")
+        prefs.edit().putBoolean(KEY_PERMISSION_ASKED, true).apply()
+        Log.d(TAG, "request location permission manual=$manual")
         activity.requestPermissions(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -531,8 +538,11 @@ internal class AmapPlatformView(
         /** 与 MainActivity 的权限回调 requestCode 一致。 */
         const val REQ_LOCATION = 4301
 
+        /** 记录「已自动申请过一次定位权限」，避免每次启动都弹窗。 */
+        const val PREFS_NAME = "nullmap_permissions"
+        const val KEY_PERMISSION_ASKED = "location_permission_asked"
+
         /** 后台定位权限：用于"所在城市变了"提醒。 */
-        const val REQ_BACKGROUND_LOCATION = 4302
 
         /** 启动时 MainActivity 已申请过权限，短时间内不再重复弹窗。 */
         const val PERMISSION_REQUEST_DEBOUNCE_MS = 5000L
