@@ -443,4 +443,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyMapUnlock => '验证并查看';
+
+  @override
+  String get privacyCallReason => '验证后拨打';
+
+  @override
+  String get contactTagExisting => '已有标签';
 }

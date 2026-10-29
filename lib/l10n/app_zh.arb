@@ -201,5 +201,7 @@
   "mapFilterTag": "标签",
   "privacyMapLockedTitle": "地图已隐藏",
   "privacyMapLockedBody": "已开启隐私锁，验证后才能查看地图与联系人位置。",
-  "privacyMapUnlock": "验证并查看"
+  "privacyMapUnlock": "验证并查看",
+  "privacyCallReason": "验证后拨打",
+  "contactTagExisting": "已有标签"
 }

@@ -474,14 +474,14 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
       ),
     ];
 
-    /// 开启隐私锁时，编辑/删除前先过一遍屏幕锁。
-    Future<bool> ensureUnlocked() async {
+    /// 开启隐私锁时，编辑/删除/拨号前先过一遍屏幕锁。
+    Future<bool> ensureUnlocked({String? reason}) async {
       if (!settings.privacyLock || PrivacyGate.instance.unlocked) {
         return true;
       }
       return PrivacyGate.instance.requestUnlock(
         context,
-        reason: l10n.privacyEditReason,
+        reason: reason ?? l10n.privacyEditReason,
         noLockMessage: l10n.privacyNoDeviceLock,
         failedMessage: l10n.privacyAuthFailed,
       );
@@ -613,7 +613,15 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                       actionLabel: rows[index].$3,
                       onAction: rows[index].$3 == null
                           ? null
-                          : () => ExternalApps.call(contact.phone),
+                          : () async {
+                              // 隐私锁状态下，拨号同样要先过屏幕锁。
+                              if (!await ensureUnlocked(
+                                reason: l10n.privacyCallReason,
+                              )) {
+                                return;
+                              }
+                              await ExternalApps.call(contact.phone);
+                            },
                       last: index == rows.length - 1,
                     ),
                 ],

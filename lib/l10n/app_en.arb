@@ -201,5 +201,7 @@
   "mapFilterTag": "Tag",
   "privacyMapLockedTitle": "Map hidden",
   "privacyMapLockedBody": "Privacy lock is on. Verify to see the map and contact pins.",
-  "privacyMapUnlock": "Verify and view"
+  "privacyMapUnlock": "Verify and view",
+  "privacyCallReason": "Verify before calling",
+  "contactTagExisting": "Existing tags"
 }

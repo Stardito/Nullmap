@@ -460,19 +460,59 @@ class _ContactEditPageState extends State<ContactEditPage> {
     });
   }
 
-  /// 添加标签：手输一个短标签，重复的（忽略大小写）直接忽略。
+  /// 添加标签：已有标签可直接点选，也可以手输一个新的。
   Future<void> _addTag() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ContactStore store = ContactScope.of(context);
+    // 全库已有标签（去重、排序），排除本联系人已经加过的。
+    final Set<String> mine = <String>{
+      for (final String tag in _tags) tag.toLowerCase(),
+    };
+    final List<String> existing =
+        <String>{for (final Contact contact in store.contacts) ...contact.tags}
+            .where(
+              (String tag) =>
+                  tag.trim().isNotEmpty &&
+                  !mine.contains(tag.trim().toLowerCase()),
+            )
+            .toList()
+          ..sort();
     final TextEditingController controller = TextEditingController();
     final String? value = await showDialog<String>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
         title: Text(l10n.contactTagAdd),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: l10n.contactTagHint),
-          onSubmitted: (String text) => Navigator.of(dialogContext).pop(text),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TextField(
+              controller: controller,
+              autofocus: existing.isEmpty,
+              decoration: InputDecoration(hintText: l10n.contactTagHint),
+              onSubmitted: (String text) =>
+                  Navigator.of(dialogContext).pop(text),
+            ),
+            if (existing.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 16),
+              Text(
+                l10n.contactTagExisting,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: <Widget>[
+                  for (final String tag in existing)
+                    ActionChip(
+                      label: Text(tag),
+                      onPressed: () => Navigator.of(dialogContext).pop(tag),
+                    ),
+                ],
+              ),
+            ],
+          ],
         ),
         actions: <Widget>[
           TextButton(

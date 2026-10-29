@@ -8,6 +8,7 @@ import 'package:nullmap/core/app_settings.dart';
 import 'package:nullmap/core/localizations.dart';
 import 'package:nullmap/data/contact.dart';
 import 'package:nullmap/data/contact_store.dart';
+import 'package:nullmap/screens/contact_edit_page.dart';
 import 'package:nullmap/screens/contacts_page.dart';
 import 'package:nullmap/screens/home_screen.dart';
 import 'package:nullmap/screens/map_page.dart';
@@ -69,6 +70,9 @@ void main() {
   setUp(() async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+    // PrivacyGate 是单例，跨用例会保留解锁状态，这里统一复位。
+    PrivacyGate.instance.lock();
+    DeviceAuth.override = null;
     tempDir = await Directory.systemTemp.createTemp('nullmap_test');
     store = await ContactStore.open(directory: tempDir);
   });
@@ -624,5 +628,78 @@ void main() {
     expect(restored.count, 1);
     expect(store.contacts.single.nickname, '阿一');
     expect(store.contacts.single.tags, <String>['家人']);
+  });
+
+  testWidgets('隐私锁下拨号需要先验证', (WidgetTester tester) async {
+    // 详情页是懒加载 ListView，把测试窗口调高，手机号行才在可视区内。
+    tester.view.physicalSize = const Size(1200, 2600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    store.add(const Contact(id: 'a', nickname: '阿一', phone: '13800000001'));
+    final AppSettings settings = AppSettings();
+    await settings.setPrivacyLock(true);
+    int authCalls = 0;
+    DeviceAuth.override = () async {
+      authCalls += 1;
+      return true;
+    };
+    addTearDown(() => DeviceAuth.override = null);
+
+    await tester.pumpWidget(_TestApp(store: store, settings: settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.people_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阿一'));
+    await tester.pumpAndSettle();
+
+    // 未解锁时手机号打码，点「拨打」必须先过屏幕锁。
+    expect(find.textContaining('138••••0001'), findsOneWidget);
+    await tester.tap(find.text('拨打'));
+    await tester.pumpAndSettle();
+    expect(authCalls, 1);
+    // 解锁后号码恢复明文。
+    expect(find.textContaining('13800000001'), findsOneWidget);
+  });
+
+  testWidgets('添加标签可以直接点选已有标签', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 2600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    store.add(const Contact(id: 'a', nickname: '阿一', tags: <String>['家人']));
+    final Contact target = const Contact(
+      id: 'b',
+      nickname: '阿二',
+      tags: <String>['同事'],
+    );
+    store.add(target);
+
+    await tester.pumpWidget(
+      AppSettingsScope(
+        settings: AppSettings(),
+        child: ContactScope(
+          store: store,
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: appSupportedLocales,
+            home: ContactEditPage(contact: target),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('添加标签'));
+    await tester.pumpAndSettle();
+
+    // 已有标签：家人（阿一的）出现在弹窗里，自己的「同事」不重复出现。
+    expect(find.text('已有标签'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ActionChip, '家人'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, '家人'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, '同事'), findsOneWidget);
   });
 }

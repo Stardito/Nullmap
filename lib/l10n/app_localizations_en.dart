@@ -458,4 +458,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyMapUnlock => 'Verify and view';
+
+  @override
+  String get privacyCallReason => 'Verify before calling';
+
+  @override
+  String get contactTagExisting => 'Existing tags';
 }

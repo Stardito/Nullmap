@@ -931,6 +931,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'验证并查看'**
   String get privacyMapUnlock;
+
+  /// No description provided for @privacyCallReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证后拨打'**
+  String get privacyCallReason;
+
+  /// No description provided for @contactTagExisting.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有标签'**
+  String get contactTagExisting;
 }
 
 class _AppLocalizationsDelegate
