@@ -169,8 +169,8 @@ class _SeedSwatch extends StatelessWidget {
     final Color color = seed == ThemeSeed.dynamic
         ? theme.colorScheme.secondary
         : AppTheme.seedOf(seed);
-    final Color onColor = ThemeData.estimateBrightnessForColor(color) ==
-            Brightness.dark
+    final Color onColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
         ? Colors.white
         : Colors.black;
 

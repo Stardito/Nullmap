@@ -1,8 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/app_settings.dart';
 import '../l10n/app_localizations.dart';
 import '../data/contact.dart';
+import '../services/privacy.dart';
 import '../services/region_alerts.dart';
+import '../widgets/privacy_lock_button.dart';
 import 'contact_edit_page.dart';
 import 'contacts_page.dart';
 import 'map_page.dart';
@@ -49,7 +52,11 @@ class HomeScreenState extends State<HomeScreen> {
       // 键盘弹出时不改变 body 高度：地图 PlatformView 一旦跟着缩放，
       // 会连续几帧被拉扁（"一顿一顿变扁"），体验很差。
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(title: Text(titles[_index])),
+      appBar: AppBar(
+        title: Text(titles[_index]),
+        // 联系人页右上角放「上锁 / 解锁」；开启隐私锁后才有内容。
+        actions: _index == 1 ? const <Widget>[PrivacyLockButton()] : null,
+      ),
       body: SafeArea(
         child: Stack(
           fit: StackFit.expand,
@@ -124,11 +131,26 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _createContact() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = AppSettingsScope.of(context);
+    // 开启隐私锁时，新增/编辑都要先验证：不然谁都能打开编辑页看明文。
+    if (settings.privacyLock &&
+        !await PrivacyGate.instance.requestUnlock(
+          context,
+          reason: l10n.privacyEditReason,
+          noLockMessage: l10n.privacyNoDeviceLock,
+          failedMessage: l10n.privacyAuthFailed,
+        )) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
     final bool? saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(builder: (_) => const ContactEditPage()),
     );
     if (saved == true && mounted) {
-      _toast(AppLocalizations.of(context).contactsSaved);
+      _toast(l10n.contactsSaved);
     }
   }
 

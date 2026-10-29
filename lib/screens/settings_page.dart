@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import 'settings_about_page.dart';
 import 'settings_appearance_page.dart';
 import 'settings_general_page.dart';
+import 'settings_privacy_page.dart';
 
 /// 设置页入口：通用 / 外观与显示 / 关于项目，各自进入子页面。
 class SettingsPage extends StatelessWidget {
@@ -37,6 +38,18 @@ class SettingsPage extends StatelessWidget {
             subtitle: Text(mapStyleLabel(l10n, settings.mapStyle)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _push(context, const SettingsAppearancePage()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.shield_outlined),
+            title: Text(l10n.settingsPrivacy),
+            subtitle: Text(
+              settings.privacyLock ? l10n.privacyLockOn : l10n.privacyLockOff,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _push(context, const SettingsPrivacyPage()),
           ),
         ),
         const SizedBox(height: 12),

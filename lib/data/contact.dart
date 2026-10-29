@@ -20,6 +20,7 @@ class Contact {
     this.regionLatitude,
     this.regionLongitude,
     this.avatarPath = '',
+    this.tags = const <String>[],
   });
 
   /// 本地唯一标识，创建后不变。
@@ -49,6 +50,11 @@ class Contact {
 
   /// 本地头像文件的绝对路径；为空时回退到 QQ 头像或首字母。
   final String avatarPath;
+
+  /// 自定义标签，用来在地图上按组筛选。
+  ///
+  /// 旧数据没有这个字段，读取时按空列表处理，保存后自动补全。
+  final List<String> tags;
 
   /// 用于界面展示的名字：优先昵称，再退回姓名、QQ、微信、手机号。
   String get displayName {
@@ -128,6 +134,7 @@ class Contact {
     double? regionLatitude,
     double? regionLongitude,
     String? avatarPath,
+    List<String>? tags,
   }) {
     return Contact(
       id: id,
@@ -146,6 +153,7 @@ class Contact {
       regionLatitude: regionLatitude ?? this.regionLatitude,
       regionLongitude: regionLongitude ?? this.regionLongitude,
       avatarPath: avatarPath ?? this.avatarPath,
+      tags: tags ?? this.tags,
     );
   }
 
@@ -166,6 +174,7 @@ class Contact {
     'regionLatitude': regionLatitude,
     'regionLongitude': regionLongitude,
     'avatarPath': avatarPath,
+    'tags': tags,
   };
 
   /// 解析单条记录；缺少 id 的脏数据返回 null。
@@ -191,6 +200,14 @@ class Contact {
     };
     final String legacyLocation = read('location');
     final String address = read('address');
+    // 旧版本没有 tags 字段：按空列表兼容，保存后自动带出来。
+    final List<String> tags = switch (json['tags']) {
+      final List<Object?> values => <String>[
+        for (final Object? tag in values)
+          if (tag != null && '$tag'.trim().isNotEmpty) '$tag'.trim(),
+      ],
+      _ => const <String>[],
+    };
     return Contact(
       id: id,
       name: read('name'),
@@ -208,6 +225,7 @@ class Contact {
       regionLatitude: readDouble('regionLatitude'),
       regionLongitude: readDouble('regionLongitude'),
       avatarPath: read('avatarPath'),
+      tags: tags,
     );
   }
 

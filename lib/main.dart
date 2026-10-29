@@ -23,7 +23,9 @@ Future<void> main() async {
   ContactStore? store;
   try {
     store = await ContactStore.open();
-    debugPrint('NullMap boot: store opened (${store.contacts.length} contacts)');
+    debugPrint(
+      'NullMap boot: store opened (${store.contacts.length} contacts)',
+    );
   } on Exception catch (error) {
     // 文档目录不可用时退回临时目录，保证界面可用。
     debugPrint('NullMap boot: open failed ($error), falling back');

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nullmap/core/app_info.dart';
@@ -11,6 +12,8 @@ import 'package:nullmap/screens/contacts_page.dart';
 import 'package:nullmap/screens/home_screen.dart';
 import 'package:nullmap/screens/map_page.dart';
 import 'package:nullmap/screens/settings_page.dart';
+import 'package:nullmap/services/backup.dart';
+import 'package:nullmap/services/privacy.dart';
 import 'package:nullmap/services/region_alerts.dart';
 import 'package:nullmap/theme/app_theme.dart';
 import 'package:nullmap/widgets/map_contact_sheet.dart';
@@ -47,7 +50,9 @@ class _TestAppState extends State<_TestApp> {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: appSupportedLocales,
             theme: AppTheme.light(seed: AppTheme.seedOf(_settings.themeSeed)),
-            darkTheme: AppTheme.dark(seed: AppTheme.seedOf(_settings.themeSeed)),
+            darkTheme: AppTheme.dark(
+              seed: AppTheme.seedOf(_settings.themeSeed),
+            ),
             themeMode: widget.mode ?? _settings.themeMode,
             home: const HomeScreen(),
           ),
@@ -76,7 +81,10 @@ void main() {
     }
   });
 
-  Future<void> pumpApp(WidgetTester tester, {ThemeMode mode = ThemeMode.light}) async {
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    ThemeMode mode = ThemeMode.light,
+  }) async {
     await tester.pumpWidget(_TestApp(store: store, mode: mode));
     await tester.pumpAndSettle();
   }
@@ -169,12 +177,7 @@ void main() {
       ),
     );
     store.add(
-      const Contact(
-        id: 'b',
-        nickname: '阿二',
-        country: '日本',
-        address: '东京都千代田区',
-      ),
+      const Contact(id: 'b', nickname: '阿二', country: '日本', address: '东京都千代田区'),
     );
     await pumpApp(tester);
     await tester.tap(find.byIcon(Icons.people_outline));
@@ -219,7 +222,9 @@ void main() {
   });
 
   testWidgets('联系人详情可以跳到地图查看', (WidgetTester tester) async {
-    store.add(const Contact(id: 'a', nickname: '阿一', latitude: 36.8, longitude: 118.3));
+    store.add(
+      const Contact(id: 'a', nickname: '阿一', latitude: 36.8, longitude: 118.3),
+    );
     await pumpApp(tester);
     await tester.tap(find.byIcon(Icons.people_outline));
     await tester.pumpAndSettle();
@@ -351,11 +356,14 @@ void main() {
 
     Widget sheet(List<String> ids) => ContactScope(
       store: store,
-      child: MaterialApp(
-        locale: const Locale('zh'),
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: appSupportedLocales,
-        home: Scaffold(body: MapContactSheet(contactIds: ids)),
+      child: AppSettingsScope(
+        settings: AppSettings(),
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: appSupportedLocales,
+          home: Scaffold(body: MapContactSheet(contactIds: ids)),
+        ),
       ),
     );
 
@@ -378,18 +386,19 @@ void main() {
   });
 
   testWidgets('地图标记面板：单个联系人直接显示概览', (WidgetTester tester) async {
-    store.add(
-      const Contact(id: 'c', nickname: '阿三', phone: '13900000002'),
-    );
+    store.add(const Contact(id: 'c', nickname: '阿三', phone: '13900000002'));
     await tester.pumpWidget(
       ContactScope(
         store: store,
-        child: MaterialApp(
-          locale: const Locale('zh'),
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: appSupportedLocales,
-          home: const Scaffold(
-            body: MapContactSheet(contactIds: <String>['c']),
+        child: AppSettingsScope(
+          settings: AppSettings(),
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: appSupportedLocales,
+            home: const Scaffold(
+              body: MapContactSheet(contactIds: <String>['c']),
+            ),
           ),
         ),
       ),
@@ -488,5 +497,132 @@ void main() {
 
     // 重置，避免影响后续用例。
     regionSelectionRequest.value = null;
+  });
+
+  testWidgets('开启隐私锁后联系人打码，解锁后显示明文', (WidgetTester tester) async {
+    store.add(
+      const Contact(
+        id: 'a',
+        name: '张三',
+        nickname: '阿一',
+        qq: '123456789',
+        phone: '13800000001',
+        province: '山东省',
+        city: '淄博市',
+        district: '临淄区',
+        address: '人民路 1 号',
+      ),
+    );
+    final AppSettings settings = AppSettings();
+    await settings.setPrivacyLock(true);
+    // 屏幕锁在测试里直接算通过。
+    DeviceAuth.override = () async => true;
+    addTearDown(() => DeviceAuth.override = null);
+
+    await tester.pumpWidget(_TestApp(store: store, settings: settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.people_outline));
+    await tester.pumpAndSettle();
+
+    // 锁定：标题仍是昵称，手机号与地址打码。
+    expect(find.text('阿一'), findsOneWidget);
+    expect(find.textContaining('138••••0001'), findsOneWidget);
+    expect(find.textContaining('13800000001'), findsNothing);
+    expect(find.textContaining('人民路'), findsNothing);
+
+    // 解锁后恢复明文，并出现上锁图标。
+    await tester.tap(find.byIcon(Icons.lock_outline));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('13800000001'), findsOneWidget);
+    expect(find.textContaining('人民路'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_open), findsOneWidget);
+  });
+
+  testWidgets('联系人标签在详情与地图筛选里可见', (WidgetTester tester) async {
+    store.add(
+      const Contact(id: 'a', nickname: '阿一', tags: <String>['家人', '常联系']),
+    );
+    await pumpApp(tester);
+    await tester.tap(find.byIcon(Icons.people_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('阿一'));
+    await tester.pumpAndSettle();
+
+    // 详情页是懒加载 ListView，先把标签卡片滚进视野。
+    await tester.scrollUntilVisible(
+      find.text('标签'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('标签'), findsOneWidget);
+    expect(find.widgetWithText(Chip, '家人'), findsOneWidget);
+    expect(find.widgetWithText(Chip, '常联系'), findsOneWidget);
+
+    // 回到地图：出现标签筛选，选「家人」后仍是同一个联系人。
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.map_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('标签: 全部'), findsOneWidget);
+    await tester.tap(find.text('标签: 全部'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('家人').last);
+    await tester.pumpAndSettle();
+    expect(find.text('标签: 家人'), findsOneWidget);
+  });
+
+  testWidgets('备份导出与导入可往返联系人与标签', (WidgetTester tester) async {
+    store.add(
+      const Contact(
+        id: 'a',
+        nickname: '阿一',
+        phone: '13800000001',
+        tags: <String>['家人'],
+      ),
+    );
+    final AppSettings settings = AppSettings();
+    await settings.setPrivacyLock(true);
+
+    String? saved;
+    final TestDefaultBinaryMessenger messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(BackupService.channel, (
+      MethodCall call,
+    ) async {
+      switch (call.method) {
+        case 'exportBackup':
+          saved =
+              (call.arguments as Map<Object?, Object?>)['content'] as String;
+          return 'Downloads/nullmap.json';
+        case 'importBackup':
+          return saved;
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(BackupService.channel, null),
+    );
+
+    final BackupResult exported = await BackupService.export(
+      store: store,
+      settings: settings,
+    );
+    expect(exported.ok, isTrue);
+    expect(exported.count, 1);
+    expect(saved, contains('家人'));
+    expect(saved, contains('privacyLock'));
+
+    store.replaceAll(const <Contact>[]);
+    expect(store.contacts, isEmpty);
+
+    final BackupResult restored = await BackupService.restore(
+      store: store,
+      settings: settings,
+    );
+    expect(restored.ok, isTrue);
+    expect(restored.count, 1);
+    expect(store.contacts.single.nickname, '阿一');
+    expect(store.contacts.single.tags, <String>['家人']);
   });
 }

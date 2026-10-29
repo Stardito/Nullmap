@@ -1,12 +1,18 @@
 package io.stardito.nullmap
 
 import android.Manifest
+import android.app.Activity
+import android.app.KeyguardManager
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationClient
@@ -28,11 +34,21 @@ import com.amap.api.services.poisearch.PoiSearch
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : FlutterActivity() {
     /** 地图通道：原生标记点击时反向调用 Dart 显示底部面板。 */
     private var amapChannel: MethodChannel? = null
+
+    /** 隐私通道：屏幕锁验证与备份文件读写。 */
+    private var securityChannel: MethodChannel? = null
+
+    /** 等待系统验证页返回的调用方；同一时间只允许一个。 */
+    private var pendingAuth: MethodChannel.Result? = null
+
+    /** 等待文件选择器返回的调用方。 */
+    private var pendingImport: MethodChannel.Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +66,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.platformViewsController.registry
             .registerViewFactory("io.stardito.nullmap/amap", AmapViewFactory())
+        configureSecurityChannel(flutterEngine)
 
         // 地图操作通道：定位回中、地点搜索、跳转到搜索结果、行政区划与地点候选。
         val channel = MethodChannel(
@@ -160,6 +177,146 @@ class MainActivity : FlutterActivity() {
         if (requestCode == AmapPlatformView.REQ_LOCATION) {
             val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
             AmapViewBridge.current?.onPermissionResult(granted)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        when (requestCode) {
+            REQ_AUTH -> {
+                // 系统验证页返回：RESULT_OK 才算通过，取消/失败都按未通过处理。
+                val callback = pendingAuth
+                pendingAuth = null
+                callback?.success(resultCode == Activity.RESULT_OK)
+                return
+            }
+
+            REQ_IMPORT -> {
+                val callback = pendingImport
+                pendingImport = null
+                if (resultCode != Activity.RESULT_OK || data?.data == null) {
+                    callback?.success(null)
+                    return
+                }
+                val text = runCatching {
+                    contentResolver.openInputStream(data.data!!)?.use { stream ->
+                        stream.bufferedReader(Charsets.UTF_8).readText()
+                    }
+                }.getOrNull()
+                callback?.success(text)
+                return
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    /** 隐私通道：屏幕锁验证 + 备份文件导入导出。 */
+    private fun configureSecurityChannel(flutterEngine: FlutterEngine) {
+        val channel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            SECURITY_CHANNEL,
+        )
+        securityChannel = channel
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isSecure" -> result.success(keyguard()?.isDeviceSecure == true)
+
+                "authenticate" -> authenticate(
+                    call.argument<String>("reason").orEmpty(),
+                    result,
+                )
+
+                "exportBackup" -> {
+                    val filename = call.argument<String>("filename")
+                        ?: "nullmap-backup.json"
+                    val content = call.argument<String>("content").orEmpty()
+                    result.success(exportBackup(filename, content))
+                }
+
+                "importBackup" -> pickBackupFile(result)
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun keyguard(): KeyguardManager? =
+        getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+
+    /**
+     * 拉起系统「确认锁屏密码」页面完成验证。
+     *
+     * 用 [KeyguardManager.createConfirmDeviceCredentialIntent] 而不是自绘密码框：
+     * 不接触任何凭据，也没有额外权限，用户已设置的 PIN / 图案 / 指纹都能用。
+     */
+    private fun authenticate(reason: String, result: MethodChannel.Result) {
+        val manager = keyguard()
+        if (manager == null || !manager.isDeviceSecure) {
+            result.success(false)
+            return
+        }
+        val intent = runCatching {
+            manager.createConfirmDeviceCredentialIntent(
+                "零点地图",
+                reason.ifBlank { "验证以查看敏感信息" },
+            )
+        }.getOrNull()
+        if (intent == null) {
+            result.success(false)
+            return
+        }
+        // 覆盖前一个等待中的请求，避免回调永远不返回。
+        pendingAuth?.success(false)
+        pendingAuth = result
+        runCatching { startActivityForResult(intent, REQ_AUTH) }.onFailure {
+            pendingAuth = null
+            result.success(false)
+        }
+    }
+
+    /** 导出到系统下载目录；Android 10 以下退回应用外部目录。 */
+    private fun exportBackup(filename: String, content: String): String? = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, filename)
+                put(MediaStore.Downloads.MIME_TYPE, "application/json")
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val resolver = contentResolver
+            val uri = resolver.insert(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                values,
+            ) ?: return@runCatching null
+            resolver.openOutputStream(uri)?.use { output ->
+                output.write(content.toByteArray(Charsets.UTF_8))
+            } ?: return@runCatching null
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            "Downloads/$filename"
+        } else {
+            val dir = File(getExternalFilesDir(null) ?: filesDir, "backup")
+            dir.mkdirs()
+            val file = File(dir, filename)
+            file.writeText(content, Charsets.UTF_8)
+            file.absolutePath
+        }
+    }.getOrNull()
+
+    /** 选择备份文件：交给系统文件选择器，应用只拿到一次性读权限。 */
+    private fun pickBackupFile(result: MethodChannel.Result) {
+        pendingImport?.success(null)
+        pendingImport = result
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("application/json", "text/plain", "application/octet-stream"),
+            )
+        }
+        runCatching { startActivityForResult(intent, REQ_IMPORT) }.onFailure {
+            pendingImport = null
+            result.success(null)
         }
     }
 
@@ -545,6 +702,13 @@ class MainActivity : FlutterActivity() {
 
     private companion object {
         const val AMAP_CHANNEL = "io.stardito.nullmap/amap"
+        const val SECURITY_CHANNEL = "io.stardito.nullmap/security"
+
+        /** 系统屏幕锁验证页。 */
+        const val REQ_AUTH = 4401
+
+        /** 系统文件选择器（导入备份）。 */
+        const val REQ_IMPORT = 4402
 
         /** 附近检索半径：50 公里。 */
         const val NEARBY_SEARCH_RADIUS_METERS = 50000

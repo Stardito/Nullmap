@@ -5,7 +5,7 @@
 用一张地图记住朋友们都在哪里：给每个人记下昵称、QQ / 微信 / 电话和所在地，地图上就会显示他的头像标记；等你换了城市，它还会提醒你这个新地方附近有几位朋友。
 
 - 技术栈：Flutter + Material 3 + 高德地图 Android SDK
-- 当前版本：`1.0.2 (17)`
+- 当前版本：1.1.0 (18)
 - 开发者：[Stardito](https://github.com/Stardito)
 - 仓库：[Stardito/Nullmap](https://github.com/Stardito/Nullmap)
 

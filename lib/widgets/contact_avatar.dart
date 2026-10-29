@@ -18,10 +18,7 @@ class ContactAvatar extends StatelessWidget {
     if (localPath.isNotEmpty) {
       final File file = File(localPath);
       if (file.existsSync()) {
-        return CircleAvatar(
-          radius: radius,
-          backgroundImage: FileImage(file),
-        );
+        return CircleAvatar(radius: radius, backgroundImage: FileImage(file));
       }
     }
 
@@ -51,11 +48,12 @@ class ContactAvatar extends StatelessWidget {
       backgroundColor: scheme.primaryContainer,
       foregroundColor: scheme.onPrimaryContainer,
       child: initial.isEmpty
-          ? Icon(Icons.person_outline, size: radius, color: scheme.onPrimaryContainer)
-          : Text(
-              initial,
-              style: TextStyle(fontSize: radius * 0.9),
-            ),
+          ? Icon(
+              Icons.person_outline,
+              size: radius,
+              color: scheme.onPrimaryContainer,
+            )
+          : Text(initial, style: TextStyle(fontSize: radius * 0.9)),
     );
   }
 }

@@ -68,11 +68,9 @@ class SettingsGeneralPage extends StatelessWidget {
                           selected: <RegionGranularity>{
                             settings.regionGranularity,
                           },
-                          onSelectionChanged:
-                              (Set<RegionGranularity> selection) =>
-                                  settings.setRegionGranularity(
-                                    selection.first,
-                                  ),
+                          onSelectionChanged: (
+                            Set<RegionGranularity> selection,
+                          ) => settings.setRegionGranularity(selection.first),
                         ),
                       ],
                     ),

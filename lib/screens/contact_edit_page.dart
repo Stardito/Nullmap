@@ -54,6 +54,9 @@ class _ContactEditPageState extends State<ContactEditPage> {
   File? _pickedAvatar;
   String? _error;
 
+  /// 自定义标签：用来给联系人分组，地图上可按标签筛选。
+  final List<String> _tags = <String>[];
+
   List<AmapPlace> _addressTips = <AmapPlace>[];
   Timer? _tipsDebounce;
   bool _tipsLoading = false;
@@ -79,6 +82,9 @@ class _ContactEditPageState extends State<ContactEditPage> {
     _regionLatitude = contact?.regionLatitude;
     _regionLongitude = contact?.regionLongitude;
     _avatarPath = contact?.avatarPath ?? '';
+    _tags
+      ..clear()
+      ..addAll(contact?.tags ?? const <String>[]);
     _qqFocus.addListener(_onQqFocusChanged);
   }
 
@@ -161,6 +167,41 @@ class _ContactEditPageState extends State<ContactEditPage> {
               label: l10n.contactPhone,
               keyboardType: TextInputType.phone,
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    l10n.contactTags,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _addTag,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.contactTagAdd),
+                ),
+              ],
+            ),
+            if (_tags.isEmpty)
+              Text(
+                l10n.contactTagEmpty,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: <Widget>[
+                  for (final String tag in _tags)
+                    InputChip(
+                      label: Text(tag),
+                      onDeleted: () => setState(() => _tags.remove(tag)),
+                    ),
+                ],
+              ),
             const SizedBox(height: 8),
             Text(
               l10n.contactLocation,
@@ -419,6 +460,44 @@ class _ContactEditPageState extends State<ContactEditPage> {
     });
   }
 
+  /// 添加标签：手输一个短标签，重复的（忽略大小写）直接忽略。
+  Future<void> _addTag() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final TextEditingController controller = TextEditingController();
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(l10n.contactTagAdd),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: l10n.contactTagHint),
+          onSubmitted: (String text) => Navigator.of(dialogContext).pop(text),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.contactsCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: Text(l10n.contactsSave),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final String tag = (value ?? '').trim();
+    if (tag.isEmpty || !mounted) {
+      return;
+    }
+    final String lower = tag.toLowerCase();
+    if (_tags.any((String item) => item.toLowerCase() == lower)) {
+      return;
+    }
+    setState(() => _tags.add(tag));
+  }
+
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String name = _name.text.trim();
@@ -468,6 +547,7 @@ class _ContactEditPageState extends State<ContactEditPage> {
       regionLatitude: _regionLatitude,
       regionLongitude: _regionLongitude,
       avatarPath: avatarPath,
+      tags: List<String>.unmodifiable(_tags),
     );
 
     if (widget.contact == null) {

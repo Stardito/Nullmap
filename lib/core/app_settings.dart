@@ -26,11 +26,7 @@ enum ThemeSeed {
 }
 
 /// 「所在地区变了」提醒的粒度。
-enum RegionGranularity {
-  province,
-  city,
-  district,
-}
+enum RegionGranularity { province, city, district }
 
 /// 应用级设置：显示语言、地图样式、主题配色、明暗模式与地区提醒。
 ///
@@ -47,6 +43,8 @@ class AppSettings extends ChangeNotifier {
   static const String _regionGranularityKey = 'region_alert_granularity';
   static const String _regionAlertLastKey = 'region_alert_last';
   static const String _notificationsAskedKey = 'notifications_asked';
+  static const String _privacyLockKey = 'privacy_lock_enabled';
+  static const String _privacyLockMapKey = 'privacy_lock_map';
 
   final SharedPreferencesAsync _preferences;
 
@@ -60,6 +58,12 @@ class AppSettings extends ChangeNotifier {
 
   /// 是否已经申请过一次通知权限：只问一次，避免每次启动都弹窗。
   bool _notificationsAsked = false;
+
+  /// 隐藏敏感信息（手机号 / 姓名 / QQ / 微信 / 地址），默认关闭。
+  bool _privacyLock = false;
+
+  /// 开启隐私锁时，地图是否也要先验证才能查看。
+  bool _privacyLockMap = false;
 
   /// `null` 表示跟随系统语言。
   Locale? get locale => _locale;
@@ -82,6 +86,12 @@ class AppSettings extends ChangeNotifier {
   /// 通知权限是否已经申请过（只申请一次）。
   bool get notificationsAsked => _notificationsAsked;
 
+  /// 「隐藏敏感信息」是否开启。
+  bool get privacyLock => _privacyLock;
+
+  /// 隐私锁开启时，地图是否也需要先验证。
+  bool get privacyLockMap => _privacyLockMap;
+
   /// 读取已保存的设置；读取失败时保留默认值。
   Future<void> load() async {
     try {
@@ -98,6 +108,10 @@ class AppSettings extends ChangeNotifier {
       );
       final bool? notificationsAsked = await _preferences.getBool(
         _notificationsAskedKey,
+      );
+      final bool? privacyLock = await _preferences.getBool(_privacyLockKey);
+      final bool? privacyLockMap = await _preferences.getBool(
+        _privacyLockMapKey,
       );
       _locale = switch (language) {
         null || '' => null,
@@ -122,6 +136,8 @@ class AppSettings extends ChangeNotifier {
       );
       _regionAlertLast = lastRegion ?? '';
       _notificationsAsked = notificationsAsked ?? false;
+      _privacyLock = privacyLock ?? false;
+      _privacyLockMap = privacyLockMap ?? false;
       notifyListeners();
     } on Exception {
       // 读取失败不阻塞启动，继续使用默认值。
@@ -204,6 +220,91 @@ class AppSettings extends ChangeNotifier {
     _themeMode = mode;
     notifyListeners();
     await _preferences.setString(_themeModeKey, mode.name);
+  }
+
+  /// 开启/关闭「隐藏敏感信息」；关闭时不需要额外处理，界面会自动显示明文。
+  Future<void> setPrivacyLock(bool enabled) async {
+    if (enabled == _privacyLock) {
+      return;
+    }
+    _privacyLock = enabled;
+    notifyListeners();
+    await _preferences.setBool(_privacyLockKey, enabled);
+  }
+
+  /// 设置「查看地图也需要验证」；关闭隐私锁时这个开关没有意义。
+  Future<void> setPrivacyLockMap(bool enabled) async {
+    if (enabled == _privacyLockMap) {
+      return;
+    }
+    _privacyLockMap = enabled;
+    notifyListeners();
+    await _preferences.setBool(_privacyLockMapKey, enabled);
+  }
+
+  /// 导出到备份文件的可配置项（不含联系人，联系人由 ContactStore 负责）。
+  Map<String, Object?> toBackup() => <String, Object?>{
+    'language': _locale?.languageCode ?? '',
+    'mapStyle': _mapStyle.name,
+    'themeSeed': _themeSeed.name,
+    'themeMode': _themeMode.name,
+    'regionAlertsEnabled': _regionAlertsEnabled,
+    'regionGranularity': _regionGranularity.name,
+    'privacyLock': _privacyLock,
+    'privacyLockMap': _privacyLockMap,
+  };
+
+  /// 从备份恢复设置；未知值直接忽略，保持当前值。
+  Future<void> applyBackup(Map<String, Object?> data) async {
+    final Object? language = data['language'];
+    if (language is String) {
+      await setLocale(language.isEmpty ? null : Locale(language));
+    }
+    final Object? style = data['mapStyle'];
+    if (style is String) {
+      await setMapStyle(
+        MapStyle.values.firstWhere(
+          (MapStyle value) => value.name == style,
+          orElse: () => _mapStyle,
+        ),
+      );
+    }
+    final Object? seed = data['themeSeed'];
+    if (seed is String) {
+      await setThemeSeed(
+        ThemeSeed.values.firstWhere(
+          (ThemeSeed value) => value.name == seed,
+          orElse: () => _themeSeed,
+        ),
+      );
+    }
+    final Object? mode = data['themeMode'];
+    if (mode is String) {
+      await setThemeMode(
+        ThemeMode.values.firstWhere(
+          (ThemeMode value) => value.name == mode,
+          orElse: () => _themeMode,
+        ),
+      );
+    }
+    if (data['regionAlertsEnabled'] is bool) {
+      await setRegionAlertsEnabled(data['regionAlertsEnabled']! as bool);
+    }
+    final Object? granularity = data['regionGranularity'];
+    if (granularity is String) {
+      await setRegionGranularity(
+        RegionGranularity.values.firstWhere(
+          (RegionGranularity value) => value.name == granularity,
+          orElse: () => _regionGranularity,
+        ),
+      );
+    }
+    if (data['privacyLock'] is bool) {
+      await setPrivacyLock(data['privacyLock']! as bool);
+    }
+    if (data['privacyLockMap'] is bool) {
+      await setPrivacyLockMap(data['privacyLockMap']! as bool);
+    }
   }
 }
 

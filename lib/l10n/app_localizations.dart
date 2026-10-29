@@ -703,6 +703,234 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'点击查看并筛选{region}的联系人'**
   String regionAlertBody(String region);
+
+  /// No description provided for @settingsPrivacy.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐私与安全'**
+  String get settingsPrivacy;
+
+  /// No description provided for @privacyLock.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏敏感信息'**
+  String get privacyLock;
+
+  /// No description provided for @privacyLockSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'手机号、姓名、QQ / 微信与地址默认打码'**
+  String get privacyLockSubtitle;
+
+  /// No description provided for @privacyLockOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启'**
+  String get privacyLockOn;
+
+  /// No description provided for @privacyLockOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'未开启'**
+  String get privacyLockOff;
+
+  /// No description provided for @privacyLockMap.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图也需要验证'**
+  String get privacyLockMap;
+
+  /// No description provided for @privacyLockMapSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看地图前先通过屏幕锁，联系人位置不会提前渲染'**
+  String get privacyLockMapSubtitle;
+
+  /// No description provided for @privacyLockHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁在当前会话内有效，清除后台后重新上锁。'**
+  String get privacyLockHint;
+
+  /// No description provided for @privacyUnlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁'**
+  String get privacyUnlock;
+
+  /// No description provided for @privacyLockNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'上锁'**
+  String get privacyLockNow;
+
+  /// No description provided for @privacyUnlockReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证以查看敏感信息'**
+  String get privacyUnlockReason;
+
+  /// No description provided for @privacyEditReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证以编辑联系人'**
+  String get privacyEditReason;
+
+  /// No description provided for @privacyToggleReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证以修改隐私设置'**
+  String get privacyToggleReason;
+
+  /// No description provided for @privacyBackupReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证以备份或恢复数据'**
+  String get privacyBackupReason;
+
+  /// No description provided for @privacyNoDeviceLock.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先在系统设置中设置锁屏密码'**
+  String get privacyNoDeviceLock;
+
+  /// No description provided for @privacyAuthFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证未通过'**
+  String get privacyAuthFailed;
+
+  /// No description provided for @privacyBackup.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份与恢复'**
+  String get privacyBackup;
+
+  /// No description provided for @privacyBackupSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出联系人与设置为 JSON 文件，或从文件恢复'**
+  String get privacyBackupSubtitle;
+
+  /// No description provided for @privacyExport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出数据'**
+  String get privacyExport;
+
+  /// No description provided for @privacyExportSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 位联系人'**
+  String privacyExportSubtitle(Object count);
+
+  /// No description provided for @privacyExportDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导出 {count} 位联系人到 {path}'**
+  String privacyExportDone(Object count, Object path);
+
+  /// No description provided for @privacyImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入数据'**
+  String get privacyImport;
+
+  /// No description provided for @privacyImportSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'从备份文件恢复，会覆盖现有联系人'**
+  String get privacyImportSubtitle;
+
+  /// No description provided for @privacyImportConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入并覆盖？'**
+  String get privacyImportConfirmTitle;
+
+  /// No description provided for @privacyImportConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入后现有联系人会被备份文件中的联系人替换，此操作无法撤销。'**
+  String get privacyImportConfirmBody;
+
+  /// No description provided for @privacyImportDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复 {count} 位联系人'**
+  String privacyImportDone(Object count);
+
+  /// No description provided for @privacyImportInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份文件格式不正确'**
+  String get privacyImportInvalid;
+
+  /// No description provided for @privacyImportCanceled.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有选择文件'**
+  String get privacyImportCanceled;
+
+  /// No description provided for @privacyBackupFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份操作失败'**
+  String get privacyBackupFailed;
+
+  /// No description provided for @privacyBackupUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前平台不支持备份'**
+  String get privacyBackupUnsupported;
+
+  /// No description provided for @contactTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get contactTags;
+
+  /// No description provided for @contactTagAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加标签'**
+  String get contactTagAdd;
+
+  /// No description provided for @contactTagHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 家人 / 同事'**
+  String get contactTagHint;
+
+  /// No description provided for @contactTagEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有标签，点「添加标签」创建一个。'**
+  String get contactTagEmpty;
+
+  /// No description provided for @mapFilterTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get mapFilterTag;
+
+  /// No description provided for @privacyMapLockedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'地图已隐藏'**
+  String get privacyMapLockedTitle;
+
+  /// No description provided for @privacyMapLockedBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启隐私锁，验证后才能查看地图与联系人位置。'**
+  String get privacyMapLockedBody;
+
+  /// No description provided for @privacyMapUnlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证并查看'**
+  String get privacyMapUnlock;
 }
 
 class _AppLocalizationsDelegate

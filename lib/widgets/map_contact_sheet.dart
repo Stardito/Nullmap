@@ -1,8 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/app_settings.dart';
 import '../data/contact.dart';
 import '../data/contact_store.dart';
 import '../l10n/app_localizations.dart';
+import '../services/privacy.dart';
 import '../widgets/contact_avatar.dart';
 import '../screens/contacts_page.dart' show ContactDetailPage;
 
@@ -24,7 +26,17 @@ class _MapContactSheetState extends State<MapContactSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // 隐私锁打开时，面板里的姓名/电话/地址同样要打码。
+    return AnimatedBuilder(
+      animation: PrivacyGate.instance,
+      builder: (BuildContext context, Widget? child) => _buildSheet(context),
+    );
+  }
+
+  Widget _buildSheet(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = AppSettingsScope.of(context);
+    final bool locked = settings.privacyLock && !PrivacyGate.instance.unlocked;
     final ContactStore store = ContactScope.of(context);
     final List<Contact> contacts = <Contact>[
       for (final String id in widget.contactIds)
@@ -57,6 +69,8 @@ class _MapContactSheetState extends State<MapContactSheet> {
               _OverviewHeader(
                 title: selected.displayName.isEmpty
                     ? l10n.mapContactOverview
+                    : locked
+                    ? selected.maskedDisplayName()
                     : selected.displayName,
                 showBack: contacts.length > 1,
                 onBack: () => setState(() => _selectedId = null),
@@ -74,12 +88,16 @@ class _MapContactSheetState extends State<MapContactSheet> {
                       contentPadding: EdgeInsets.zero,
                       leading: ContactAvatar(contact: contact, radius: 22),
                       title: Text(
-                        contact.displayName.isEmpty
-                            ? l10n.navContacts
-                            : contact.displayName,
+                        locked
+                            ? (contact.maskedDisplayName().isEmpty
+                                  ? l10n.navContacts
+                                  : contact.maskedDisplayName())
+                            : (contact.displayName.isEmpty
+                                  ? l10n.navContacts
+                                  : contact.displayName),
                       ),
                       subtitle: Text(
-                        _summary(l10n, contact),
+                        _summary(l10n, contact, locked: locked),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -90,14 +108,22 @@ class _MapContactSheetState extends State<MapContactSheet> {
                 ),
               )
             else
-              _OverviewBody(contact: selected),
+              _OverviewBody(contact: selected, locked: locked),
           ],
         ),
       ),
     );
   }
 
-  String _summary(AppLocalizations l10n, Contact contact) {
+  String _summary(
+    AppLocalizations l10n,
+    Contact contact, {
+    required bool locked,
+  }) {
+    if (locked) {
+      final String masked = contact.maskedSummary(locked: true);
+      return masked.isEmpty ? l10n.contactNotFilled : masked;
+    }
     final String location = contact.locationText;
     if (location.isNotEmpty) {
       return location;
@@ -144,13 +170,22 @@ class _OverviewHeader extends StatelessWidget {
 }
 
 class _OverviewBody extends StatelessWidget {
-  const _OverviewBody({required this.contact});
+  const _OverviewBody({required this.contact, required this.locked});
 
   final Contact contact;
+
+  /// 开启隐私锁且未解锁时，电话与地址要打码。
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final String phone = locked
+        ? Redaction.phone(contact.phone)
+        : contact.phone;
+    final String place = locked
+        ? Redaction.place(contact.locationText)
+        : contact.locationText;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,7 +194,7 @@ class _OverviewBody extends StatelessWidget {
         const SizedBox(height: 8),
         Center(
           child: Text(
-            contact.displayName,
+            locked ? contact.maskedDisplayName() : contact.displayName,
             style: Theme.of(context).textTheme.titleMedium,
             textAlign: TextAlign.center,
           ),
@@ -168,15 +203,13 @@ class _OverviewBody extends StatelessWidget {
         _InfoRow(
           icon: Icons.phone_outlined,
           label: l10n.contactPhone,
-          value: contact.phone.isEmpty ? l10n.contactNotFilled : contact.phone,
+          value: phone.isEmpty ? l10n.contactNotFilled : phone,
         ),
         const SizedBox(height: 8),
         _InfoRow(
           icon: Icons.place_outlined,
           label: l10n.contactLocation,
-          value: contact.locationText.isEmpty
-              ? l10n.contactNotFilled
-              : contact.locationText,
+          value: place.isEmpty ? l10n.contactNotFilled : place,
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
@@ -223,9 +256,8 @@ class _InfoRow extends StatelessWidget {
             children: <Widget>[
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
               Text(value, style: Theme.of(context).textTheme.bodyMedium),
             ],

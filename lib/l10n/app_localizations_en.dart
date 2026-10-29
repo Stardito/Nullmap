@@ -330,4 +330,132 @@ class AppLocalizationsEn extends AppLocalizations {
   String regionAlertBody(String region) {
     return 'Tap to view and filter contacts in $region';
   }
+
+  @override
+  String get settingsPrivacy => 'Privacy & security';
+
+  @override
+  String get privacyLock => 'Hide sensitive info';
+
+  @override
+  String get privacyLockSubtitle => 'Mask phone, name, QQ / WeChat and address';
+
+  @override
+  String get privacyLockOn => 'On';
+
+  @override
+  String get privacyLockOff => 'Off';
+
+  @override
+  String get privacyLockMap => 'Require unlock for the map';
+
+  @override
+  String get privacyLockMapSubtitle =>
+      'Ask for the screen lock before showing the map and contact pins';
+
+  @override
+  String get privacyLockHint =>
+      'Unlocking lasts until the app is removed from recents.';
+
+  @override
+  String get privacyUnlock => 'Unlock';
+
+  @override
+  String get privacyLockNow => 'Lock now';
+
+  @override
+  String get privacyUnlockReason => 'Verify to reveal sensitive info';
+
+  @override
+  String get privacyEditReason => 'Verify to edit contacts';
+
+  @override
+  String get privacyToggleReason => 'Verify to change privacy settings';
+
+  @override
+  String get privacyBackupReason => 'Verify to back up or restore';
+
+  @override
+  String get privacyNoDeviceLock =>
+      'Set a screen lock in system settings first';
+
+  @override
+  String get privacyAuthFailed => 'Verification failed';
+
+  @override
+  String get privacyBackup => 'Backup & restore';
+
+  @override
+  String get privacyBackupSubtitle =>
+      'Export contacts and settings to JSON, or restore from a file';
+
+  @override
+  String get privacyExport => 'Export data';
+
+  @override
+  String privacyExportSubtitle(Object count) {
+    return '$count contacts';
+  }
+
+  @override
+  String privacyExportDone(Object count, Object path) {
+    return 'Exported $count contacts to $path';
+  }
+
+  @override
+  String get privacyImport => 'Import data';
+
+  @override
+  String get privacyImportSubtitle =>
+      'Restore from a backup file; replaces current contacts';
+
+  @override
+  String get privacyImportConfirmTitle => 'Import and replace?';
+
+  @override
+  String get privacyImportConfirmBody =>
+      'Your current contacts will be replaced by the ones in the backup. This cannot be undone.';
+
+  @override
+  String privacyImportDone(Object count) {
+    return 'Restored $count contacts';
+  }
+
+  @override
+  String get privacyImportInvalid => 'That backup file is not valid';
+
+  @override
+  String get privacyImportCanceled => 'No file selected';
+
+  @override
+  String get privacyBackupFailed => 'Backup failed';
+
+  @override
+  String get privacyBackupUnsupported =>
+      'Backup is not supported on this platform';
+
+  @override
+  String get contactTags => 'Tags';
+
+  @override
+  String get contactTagAdd => 'Add tag';
+
+  @override
+  String get contactTagHint => 'e.g. Family / Work';
+
+  @override
+  String get contactTagEmpty => 'No tags yet. Tap \"Add tag\" to create one.';
+
+  @override
+  String get mapFilterTag => 'Tag';
+
+  @override
+  String get privacyMapLockedTitle => 'Map hidden';
+
+  @override
+  String get privacyMapLockedBody =>
+      'Privacy lock is on. Verify to see the map and contact pins.';
+
+  @override
+  String get privacyMapUnlock => 'Verify and view';
 }

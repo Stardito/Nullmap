@@ -145,5 +145,61 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsPrivacy": "隐私与安全",
+  "privacyLock": "隐藏敏感信息",
+  "privacyLockSubtitle": "手机号、姓名、QQ / 微信与地址默认打码",
+  "privacyLockOn": "已开启",
+  "privacyLockOff": "未开启",
+  "privacyLockMap": "地图也需要验证",
+  "privacyLockMapSubtitle": "查看地图前先通过屏幕锁，联系人位置不会提前渲染",
+  "privacyLockHint": "解锁在当前会话内有效，清除后台后重新上锁。",
+  "privacyUnlock": "解锁",
+  "privacyLockNow": "上锁",
+  "privacyUnlockReason": "验证以查看敏感信息",
+  "privacyEditReason": "验证以编辑联系人",
+  "privacyToggleReason": "验证以修改隐私设置",
+  "privacyBackupReason": "验证以备份或恢复数据",
+  "privacyNoDeviceLock": "请先在系统设置中设置锁屏密码",
+  "privacyAuthFailed": "验证未通过",
+  "privacyBackup": "备份与恢复",
+  "privacyBackupSubtitle": "导出联系人与设置为 JSON 文件，或从文件恢复",
+  "privacyExport": "导出数据",
+  "privacyExportSubtitle": "共 {count} 位联系人",
+  "@privacyExportSubtitle": {
+    "count": {
+      "type": "int"
+    }
+  },
+  "privacyExportDone": "已导出 {count} 位联系人到 {path}",
+  "@privacyExportDone": {
+    "count": {
+      "type": "int"
+    },
+    "path": {
+      "type": "String"
+    }
+  },
+  "privacyImport": "导入数据",
+  "privacyImportSubtitle": "从备份文件恢复，会覆盖现有联系人",
+  "privacyImportConfirmTitle": "导入并覆盖？",
+  "privacyImportConfirmBody": "导入后现有联系人会被备份文件中的联系人替换，此操作无法撤销。",
+  "privacyImportDone": "已恢复 {count} 位联系人",
+  "@privacyImportDone": {
+    "count": {
+      "type": "int"
+    }
+  },
+  "privacyImportInvalid": "备份文件格式不正确",
+  "privacyImportCanceled": "没有选择文件",
+  "privacyBackupFailed": "备份操作失败",
+  "privacyBackupUnsupported": "当前平台不支持备份",
+  "contactTags": "标签",
+  "contactTagAdd": "添加标签",
+  "contactTagHint": "例如 家人 / 同事",
+  "contactTagEmpty": "还没有标签，点「添加标签」创建一个。",
+  "mapFilterTag": "标签",
+  "privacyMapLockedTitle": "地图已隐藏",
+  "privacyMapLockedBody": "已开启隐私锁，验证后才能查看地图与联系人位置。",
+  "privacyMapUnlock": "验证并查看"
 }

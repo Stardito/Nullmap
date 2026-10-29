@@ -12,6 +12,7 @@ import '../l10n/app_localizations.dart';
 import '../services/amap_service.dart';
 import '../services/avatar_bytes.dart';
 import '../services/monet.dart';
+import '../services/privacy.dart';
 import 'settings_appearance_page.dart';
 import '../widgets/contact_avatar.dart';
 import '../widgets/map_contact_sheet.dart';
@@ -41,6 +42,9 @@ class MapPageState extends State<MapPage> {
   bool _syncingPins = false;
   List<Contact>? _pendingPins;
 
+  /// 地图上按标签筛选：null 表示全部。
+  String? _tagFilter;
+
   /// 行政区中心点缓存，key 为「级别:名称」；只缓存成功结果，失败留给重试。
   final Map<String, ({double latitude, double longitude})> _regionCenters =
       <String, ({double latitude, double longitude})>{};
@@ -58,6 +62,23 @@ class MapPageState extends State<MapPage> {
       // 原生把被点中的标记（联系人 id 列表）回调回来，由 Flutter 用 M3 底部面板展示。
       AmapService.channel.setMethodCallHandler(_onNativeCall);
     }
+    // 上锁/解锁要立刻同步标记：上锁时把头像从地图上撤掉。
+    PrivacyGate.instance.addListener(_onPrivacyChanged);
+  }
+
+  void _onPrivacyChanged() {
+    if (!mounted) {
+      return;
+    }
+    // 解锁/上锁可能发生在路由切换或系统验证返回的瞬间，推到下一帧再同步，
+    // 避免在 build/layout 阶段同时改标记与重建地图。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _syncContactPins();
+      setState(() {});
+    });
   }
 
   @override
@@ -75,6 +96,7 @@ class MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _backfillRetry?.cancel();
+    PrivacyGate.instance.removeListener(_onPrivacyChanged);
     if (Platform.isAndroid) {
       AmapService.channel.setMethodCallHandler(null);
     }
@@ -322,26 +344,92 @@ class MapPageState extends State<MapPage> {
     });
   }
 
+  /// 地图是否处于「必须先验证」的锁定状态。
+  bool get _mapLocked {
+    final AppSettings settings = AppSettingsScope.of(context);
+    return settings.privacyLock &&
+        settings.privacyLockMap &&
+        !PrivacyGate.instance.unlocked;
+  }
+
+  /// 选择地图上要显示的标签；空字符串代表「全部」。
+  Future<void> _pickTag(List<String> tags) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.mapFilterTag,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.clear),
+              title: Text(l10n.contactsFilterAll),
+              selected: _tagFilter == null,
+              onTap: () => Navigator.of(sheetContext).pop(''),
+            ),
+            for (final String tag in tags)
+              ListTile(
+                leading: const Icon(Icons.label_outline),
+                title: Text(tag),
+                selected: _tagFilter == tag,
+                onTap: () => Navigator.of(sheetContext).pop(tag),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    setState(() => _tagFilter = picked.isEmpty ? null : picked);
+    _syncContactPins();
+  }
+
+  Future<void> _unlockMap() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool ok = await PrivacyGate.instance.requestUnlock(
+      context,
+      reason: l10n.privacyUnlockReason,
+      noLockMessage: l10n.privacyNoDeviceLock,
+      failedMessage: l10n.privacyAuthFailed,
+    );
+    if (ok && mounted) {
+      _syncContactPins();
+    }
+  }
+
   /// 把「有坐标的联系人」推给原生画成圆形头像标记。
   ///
   /// 坐标优先取详细地址，其次退回省/市/区中心；只同步变化过的数据，
   /// 原生侧会缓存最后一批标记，切换地图样式重建视图后自动恢复。
+  /// 隐私锁住地图时推空列表：连位置都不渲染，避免被截图或读屏拿到。
   void _syncContactPins() {
     if (!Platform.isAndroid) {
       return;
     }
     final ContactStore store = ContactScope.of(context);
-    final List<Contact> located = <Contact>[
-      for (final Contact contact in store.contacts)
-        if (contact.isLocatable) contact,
-    ];
-    final String signature = located
-        .map(
-          (Contact contact) =>
-              '${contact.id}|${contact.mapLatitude}|${contact.mapLongitude}|'
-              '${contact.displayName}|${contact.avatarPath}|${contact.qq}',
-        )
-        .join(';');
+    final bool hidden = _mapLocked;
+    final String? tag = _tagFilter;
+    final List<Contact> located = hidden
+        ? const <Contact>[]
+        : <Contact>[
+            for (final Contact contact in store.contacts)
+              if (contact.isLocatable &&
+                  (tag == null || contact.tags.contains(tag)))
+                contact,
+          ];
+    final String signature = hidden
+        ? 'locked'
+        : '$tag|${located.map((Contact contact) => '${contact.id}|${contact.mapLatitude}|${contact.mapLongitude}|'
+              '${contact.displayName}|${contact.avatarPath}|${contact.qq}').join(';')}';
     if (signature == _pinSignature) {
       return;
     }
@@ -402,6 +490,10 @@ class MapPageState extends State<MapPage> {
                 : const Color(0xFFF1F3F4))
             .toARGB32();
     final int primary = scheme.primary.toARGB32();
+    final List<String> tagList = <String>{
+      for (final Contact contact in ContactScope.of(context).contacts)
+        ...contact.tags,
+    }.toList()..sort();
 
     return Column(
       children: <Widget>[
@@ -428,6 +520,25 @@ class MapPageState extends State<MapPage> {
             onSubmitted: (_) => _searchContacts(),
           ),
         ),
+        if (tagList.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FilterChip(
+                selected: _tagFilter != null,
+                showCheckmark: false,
+                avatar: Icon(
+                  _tagFilter == null ? Icons.label_outline : Icons.label,
+                  size: 18,
+                ),
+                label: Text(
+                  '${l10n.mapFilterTag}: ${_tagFilter ?? l10n.contactsFilterAll}',
+                ),
+                onSelected: (_) => _pickTag(tagList),
+              ),
+            ),
+          ),
         Expanded(
           child: Stack(
             children: <Widget>[
@@ -465,6 +576,46 @@ class MapPageState extends State<MapPage> {
                     child: ListTile(
                       leading: const Icon(Icons.search_off),
                       title: Text(l10n.mapSearchContactsEmpty),
+                    ),
+                  ),
+                ),
+              // 隐私锁住地图时整块盖住：PlatformView 不能模糊，用不透明页面挡住更可靠。
+              if (_mapLocked)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: scheme.surface,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Icons.lock_outline,
+                              size: 44,
+                              color: scheme.primary,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.privacyMapLockedTitle,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.privacyMapLockedBody,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: _unlockMap,
+                              icon: const Icon(Icons.fingerprint),
+                              label: Text(l10n.privacyMapUnlock),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

@@ -27,7 +27,8 @@ class ContactStore extends ChangeNotifier {
 
   /// 打开（或初始化）仓库并读取已有数据。
   static Future<ContactStore> open({Directory? directory}) async {
-    final Directory base = directory ?? await getApplicationDocumentsDirectory();
+    final Directory base =
+        directory ?? await getApplicationDocumentsDirectory();
     await base.create(recursive: true);
     final ContactStore store = ContactStore._(
       File('${base.path}${Platform.pathSeparator}contacts.json'),
@@ -70,9 +71,7 @@ class ContactStore extends ChangeNotifier {
 
   Future<void> _persist() async {
     await _file.writeAsString(
-      jsonEncode(
-        _contacts.map((Contact contact) => contact.toJson()).toList(),
-      ),
+      jsonEncode(_contacts.map((Contact contact) => contact.toJson()).toList()),
       flush: true,
     );
   }
@@ -128,6 +127,13 @@ class ContactStore extends ChangeNotifier {
         }
       }
     }
+  }
+
+  /// 导入备份：整体替换现有联系人（备份里没有的头像文件不会被删除）。
+  void replaceAll(List<Contact> contacts) {
+    _contacts = <Contact>[...contacts];
+    notifyListeners();
+    _schedulePersist();
   }
 
   /// 把选中的图片复制进应用目录，返回新路径。

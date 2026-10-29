@@ -112,7 +112,10 @@ class RegionAlerts {
     }
 
     final List<Contact> matches = contacts
-        .where((Contact contact) => _inRegion(contact, settings.regionGranularity, name))
+        .where(
+          (Contact contact) =>
+              _inRegion(contact, settings.regionGranularity, name),
+        )
         .toList();
     if (matches.isEmpty) {
       return;
@@ -159,7 +162,9 @@ class RegionAlerts {
       channelDescription: _channelDescription,
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
-      styleInformation: BigTextStyleInformation(l10n.regionAlertBody(regionName)),
+      styleInformation: BigTextStyleInformation(
+        l10n.regionAlertBody(regionName),
+      ),
     );
     try {
       await _plugin.show(
@@ -181,9 +186,7 @@ class RegionAlerts {
     }
     final Locale system = PlatformDispatcher.instance.locale;
     return lookupAppLocalizations(
-      appSupportedLocales.contains(system)
-          ? system
-          : const Locale('en'),
+      appSupportedLocales.contains(system) ? system : const Locale('en'),
     );
   }
 

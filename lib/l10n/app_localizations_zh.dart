@@ -323,4 +323,124 @@ class AppLocalizationsZh extends AppLocalizations {
   String regionAlertBody(String region) {
     return '点击查看并筛选$region的联系人';
   }
+
+  @override
+  String get settingsPrivacy => '隐私与安全';
+
+  @override
+  String get privacyLock => '隐藏敏感信息';
+
+  @override
+  String get privacyLockSubtitle => '手机号、姓名、QQ / 微信与地址默认打码';
+
+  @override
+  String get privacyLockOn => '已开启';
+
+  @override
+  String get privacyLockOff => '未开启';
+
+  @override
+  String get privacyLockMap => '地图也需要验证';
+
+  @override
+  String get privacyLockMapSubtitle => '查看地图前先通过屏幕锁，联系人位置不会提前渲染';
+
+  @override
+  String get privacyLockHint => '解锁在当前会话内有效，清除后台后重新上锁。';
+
+  @override
+  String get privacyUnlock => '解锁';
+
+  @override
+  String get privacyLockNow => '上锁';
+
+  @override
+  String get privacyUnlockReason => '验证以查看敏感信息';
+
+  @override
+  String get privacyEditReason => '验证以编辑联系人';
+
+  @override
+  String get privacyToggleReason => '验证以修改隐私设置';
+
+  @override
+  String get privacyBackupReason => '验证以备份或恢复数据';
+
+  @override
+  String get privacyNoDeviceLock => '请先在系统设置中设置锁屏密码';
+
+  @override
+  String get privacyAuthFailed => '验证未通过';
+
+  @override
+  String get privacyBackup => '备份与恢复';
+
+  @override
+  String get privacyBackupSubtitle => '导出联系人与设置为 JSON 文件，或从文件恢复';
+
+  @override
+  String get privacyExport => '导出数据';
+
+  @override
+  String privacyExportSubtitle(Object count) {
+    return '共 $count 位联系人';
+  }
+
+  @override
+  String privacyExportDone(Object count, Object path) {
+    return '已导出 $count 位联系人到 $path';
+  }
+
+  @override
+  String get privacyImport => '导入数据';
+
+  @override
+  String get privacyImportSubtitle => '从备份文件恢复，会覆盖现有联系人';
+
+  @override
+  String get privacyImportConfirmTitle => '导入并覆盖？';
+
+  @override
+  String get privacyImportConfirmBody => '导入后现有联系人会被备份文件中的联系人替换，此操作无法撤销。';
+
+  @override
+  String privacyImportDone(Object count) {
+    return '已恢复 $count 位联系人';
+  }
+
+  @override
+  String get privacyImportInvalid => '备份文件格式不正确';
+
+  @override
+  String get privacyImportCanceled => '没有选择文件';
+
+  @override
+  String get privacyBackupFailed => '备份操作失败';
+
+  @override
+  String get privacyBackupUnsupported => '当前平台不支持备份';
+
+  @override
+  String get contactTags => '标签';
+
+  @override
+  String get contactTagAdd => '添加标签';
+
+  @override
+  String get contactTagHint => '例如 家人 / 同事';
+
+  @override
+  String get contactTagEmpty => '还没有标签，点「添加标签」创建一个。';
+
+  @override
+  String get mapFilterTag => '标签';
+
+  @override
+  String get privacyMapLockedTitle => '地图已隐藏';
+
+  @override
+  String get privacyMapLockedBody => '已开启隐私锁，验证后才能查看地图与联系人位置。';
+
+  @override
+  String get privacyMapUnlock => '验证并查看';
 }

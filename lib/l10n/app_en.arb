@@ -145,5 +145,61 @@
         "type": "String"
       }
     }
-  }
+  },
+  "settingsPrivacy": "Privacy & security",
+  "privacyLock": "Hide sensitive info",
+  "privacyLockSubtitle": "Mask phone, name, QQ / WeChat and address",
+  "privacyLockOn": "On",
+  "privacyLockOff": "Off",
+  "privacyLockMap": "Require unlock for the map",
+  "privacyLockMapSubtitle": "Ask for the screen lock before showing the map and contact pins",
+  "privacyLockHint": "Unlocking lasts until the app is removed from recents.",
+  "privacyUnlock": "Unlock",
+  "privacyLockNow": "Lock now",
+  "privacyUnlockReason": "Verify to reveal sensitive info",
+  "privacyEditReason": "Verify to edit contacts",
+  "privacyToggleReason": "Verify to change privacy settings",
+  "privacyBackupReason": "Verify to back up or restore",
+  "privacyNoDeviceLock": "Set a screen lock in system settings first",
+  "privacyAuthFailed": "Verification failed",
+  "privacyBackup": "Backup & restore",
+  "privacyBackupSubtitle": "Export contacts and settings to JSON, or restore from a file",
+  "privacyExport": "Export data",
+  "privacyExportSubtitle": "{count} contacts",
+  "@privacyExportSubtitle": {
+    "count": {
+      "type": "int"
+    }
+  },
+  "privacyExportDone": "Exported {count} contacts to {path}",
+  "@privacyExportDone": {
+    "count": {
+      "type": "int"
+    },
+    "path": {
+      "type": "String"
+    }
+  },
+  "privacyImport": "Import data",
+  "privacyImportSubtitle": "Restore from a backup file; replaces current contacts",
+  "privacyImportConfirmTitle": "Import and replace?",
+  "privacyImportConfirmBody": "Your current contacts will be replaced by the ones in the backup. This cannot be undone.",
+  "privacyImportDone": "Restored {count} contacts",
+  "@privacyImportDone": {
+    "count": {
+      "type": "int"
+    }
+  },
+  "privacyImportInvalid": "That backup file is not valid",
+  "privacyImportCanceled": "No file selected",
+  "privacyBackupFailed": "Backup failed",
+  "privacyBackupUnsupported": "Backup is not supported on this platform",
+  "contactTags": "Tags",
+  "contactTagAdd": "Add tag",
+  "contactTagHint": "e.g. Family / Work",
+  "contactTagEmpty": "No tags yet. Tap \"Add tag\" to create one.",
+  "mapFilterTag": "Tag",
+  "privacyMapLockedTitle": "Map hidden",
+  "privacyMapLockedBody": "Privacy lock is on. Verify to see the map and contact pins.",
+  "privacyMapUnlock": "Verify and view"
 }

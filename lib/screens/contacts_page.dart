@@ -2,14 +2,17 @@ import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../core/app_settings.dart';
 import '../data/contact.dart';
 import '../data/contact_store.dart';
 import '../l10n/app_localizations.dart';
 import '../services/avatar_bytes.dart';
 import '../services/external_apps.dart';
 import '../services/monet.dart';
+import '../services/privacy.dart';
 import '../services/region_alerts.dart';
 import '../widgets/contact_avatar.dart';
+import '../widgets/privacy_lock_button.dart';
 import 'contact_edit_page.dart';
 import 'home_screen.dart';
 
@@ -52,9 +55,7 @@ class _ContactsPageState extends State<ContactsPage> {
     }
     setState(() {
       _filterCountry = null;
-      _filterProvince = selection.province.isEmpty
-          ? null
-          : selection.province;
+      _filterProvince = selection.province.isEmpty ? null : selection.province;
       _filterCity = selection.city.isEmpty ? null : selection.city;
       _filterDistrict = null;
     });
@@ -62,7 +63,17 @@ class _ContactsPageState extends State<ContactsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 上锁/解锁会影响列表里的名称、手机号与地址，跟着 PrivacyGate 一起重建。
+    return AnimatedBuilder(
+      animation: PrivacyGate.instance,
+      builder: (BuildContext context, Widget? child) => _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = AppSettingsScope.of(context);
+    final bool locked = settings.privacyLock && !PrivacyGate.instance.unlocked;
     final List<Contact> contacts = ContactScope.of(context).contacts;
 
     String countryOf(Contact contact) {
@@ -73,32 +84,26 @@ class _ContactsPageState extends State<ContactsPage> {
     bool inCountry(Contact contact) =>
         _filterCountry == null || countryOf(contact) == _filterCountry;
 
-    final List<String> countries =
-        <String>{for (final Contact c in contacts) countryOf(c)}.toList()
-          ..sort();
-    final List<String> provinces =
-        <String>{
-            for (final Contact c in contacts.where(inCountry))
-              if (c.province.trim().isNotEmpty) c.province.trim(),
-          }.toList()
-          ..sort();
-    final List<String> cities =
-        <String>{
-            for (final Contact c in contacts.where(inCountry))
-              if ((_filterProvince == null || c.province == _filterProvince) &&
-                  c.city.trim().isNotEmpty)
-                c.city.trim(),
-          }.toList()
-          ..sort();
-    final List<String> districts =
-        <String>{
-            for (final Contact c in contacts.where(inCountry))
-              if ((_filterProvince == null || c.province == _filterProvince) &&
-                  (_filterCity == null || c.city == _filterCity) &&
-                  c.district.trim().isNotEmpty)
-                c.district.trim(),
-          }.toList()
-          ..sort();
+    final List<String> countries = <String>{
+      for (final Contact c in contacts) countryOf(c),
+    }.toList()..sort();
+    final List<String> provinces = <String>{
+      for (final Contact c in contacts.where(inCountry))
+        if (c.province.trim().isNotEmpty) c.province.trim(),
+    }.toList()..sort();
+    final List<String> cities = <String>{
+      for (final Contact c in contacts.where(inCountry))
+        if ((_filterProvince == null || c.province == _filterProvince) &&
+            c.city.trim().isNotEmpty)
+          c.city.trim(),
+    }.toList()..sort();
+    final List<String> districts = <String>{
+      for (final Contact c in contacts.where(inCountry))
+        if ((_filterProvince == null || c.province == _filterProvince) &&
+            (_filterCity == null || c.city == _filterCity) &&
+            c.district.trim().isNotEmpty)
+          c.district.trim(),
+    }.toList()..sort();
 
     final List<Contact> visible = contacts.where((Contact contact) {
       if (!inCountry(contact)) return false;
@@ -132,8 +137,7 @@ class _ContactsPageState extends State<ContactsPage> {
                   },
                 ),
             ],
-            onChanged: (String value) =>
-                setState(() => _query = value.trim()),
+            onChanged: (String value) => setState(() => _query = value.trim()),
           ),
         ),
         Padding(
@@ -200,7 +204,10 @@ class _ContactsPageState extends State<ContactsPage> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                   itemCount: visible.length,
                   itemBuilder: (BuildContext context, int index) {
-                    return _ContactTile(contact: visible[index]);
+                    return _ContactTile(
+                      contact: visible[index],
+                      locked: locked,
+                    );
                   },
                 ),
         ),
@@ -231,10 +238,7 @@ class _ContactsPageState extends State<ContactsPage> {
     return FilterChip(
       selected: value != null,
       showCheckmark: false,
-      avatar: Icon(
-        value == null ? Icons.tune : Icons.place_outlined,
-        size: 18,
-      ),
+      avatar: Icon(value == null ? Icons.tune : Icons.place_outlined, size: 18),
       label: Text('$label: ${value ?? l10n.contactsFilterAll}'),
       onSelected: (_) => _pickRegion(
         title: label,
@@ -339,34 +343,33 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ContactTile extends StatelessWidget {
-  const _ContactTile({required this.contact});
+  const _ContactTile({required this.contact, required this.locked});
 
   final Contact contact;
+
+  /// 开启隐私锁且当前会话未解锁：手机号、地址与姓名要打码。
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final List<String> details = <String>[
-      if (contact.phone.trim().isNotEmpty) contact.phone.trim(),
-      if (contact.locationText.isNotEmpty) contact.locationText,
-    ];
+    final String title = locked
+        ? contact.maskedDisplayName()
+        : contact.displayName;
+    final String summary = contact.maskedSummary(locked: locked);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         leading: ContactAvatar(contact: contact),
         title: Text(
-          contact.displayName.isEmpty ? l10n.contactNotFilled : contact.displayName,
+          title.isEmpty ? l10n.contactNotFilled : title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: details.isEmpty
+        subtitle: summary.isEmpty
             ? null
-            : Text(
-                details.join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            : Text(summary, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -421,7 +424,16 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: PrivacyGate.instance,
+      builder: (BuildContext context, Widget? child) => _buildDetail(context),
+    );
+  }
+
+  Widget _buildDetail(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = AppSettingsScope.of(context);
+    final bool locked = settings.privacyLock && !PrivacyGate.instance.unlocked;
     final ContactStore store = ContactScope.of(context);
     final Contact? contact = store.byId(widget.contactId);
     if (contact == null) {
@@ -432,16 +444,56 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
     }
 
     final String location = contact.locationText;
+    // 锁定状态下姓名、QQ、微信、手机号、地址全部打码；昵称仍是标题。
     final List<(String, String, String?)> rows = <(String, String, String?)>[
-      (l10n.contactName, contact.name, null),
+      (
+        l10n.contactName,
+        locked ? Redaction.name(contact.name) : contact.name,
+        null,
+      ),
       (l10n.contactNickname, contact.nickname, null),
-      (l10n.contactQq, contact.qq, null),
-      (l10n.contactWechat, contact.wechat, null),
-      (l10n.contactPhone, contact.phone, l10n.contactCall),
-      (l10n.contactLocation, location, null),
+      (
+        l10n.contactQq,
+        locked ? Redaction.account(contact.qq) : contact.qq,
+        null,
+      ),
+      (
+        l10n.contactWechat,
+        locked ? Redaction.account(contact.wechat) : contact.wechat,
+        null,
+      ),
+      (
+        l10n.contactPhone,
+        locked ? Redaction.phone(contact.phone) : contact.phone,
+        l10n.contactCall,
+      ),
+      (
+        l10n.contactLocation,
+        locked ? Redaction.place(location) : location,
+        null,
+      ),
     ];
 
+    /// 开启隐私锁时，编辑/删除前先过一遍屏幕锁。
+    Future<bool> ensureUnlocked() async {
+      if (!settings.privacyLock || PrivacyGate.instance.unlocked) {
+        return true;
+      }
+      return PrivacyGate.instance.requestUnlock(
+        context,
+        reason: l10n.privacyEditReason,
+        noLockMessage: l10n.privacyNoDeviceLock,
+        failedMessage: l10n.privacyAuthFailed,
+      );
+    }
+
     Future<void> delete() async {
+      if (!await ensureUnlocked()) {
+        return;
+      }
+      if (!context.mounted) {
+        return;
+      }
       final bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (BuildContext dialogContext) => AlertDialog(
@@ -470,9 +522,8 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
       }
       store.remove(contact.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.contactsDeleted)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.contactsDeleted)));
         Navigator.of(context).pop();
       }
     }
@@ -493,10 +544,17 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
           contact.displayName.isEmpty ? l10n.navContacts : contact.displayName,
         ),
         actions: <Widget>[
+          const PrivacyLockButton(),
           IconButton(
             tooltip: l10n.contactsEdit,
             icon: const Icon(Icons.edit_outlined),
             onPressed: () async {
+              if (!await ensureUnlocked()) {
+                return;
+              }
+              if (!context.mounted) {
+                return;
+              }
               final bool? changed = await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
                   builder: (BuildContext context) =>
@@ -504,9 +562,8 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                 ),
               );
               if (changed == true && context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.contactsSaved)));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(l10n.contactsSaved)));
               }
             },
           ),
@@ -541,9 +598,8 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                 contact.displayName.isEmpty
                     ? l10n.contactNotFilled
                     : contact.displayName,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(color: onStart),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(color: onStart),
               ),
             ),
             const SizedBox(height: 16),
@@ -564,11 +620,31 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
               ),
             ),
             const SizedBox(height: 12),
+            if (contact.tags.isNotEmpty) ...<Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        l10n.contactTags,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      for (final String tag in contact.tags)
+                        Chip(label: Text(tag)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             FilledButton.tonalIcon(
               onPressed: () {
-                Navigator.of(context).popUntil(
-                  (Route<void> route) => route.isFirst,
-                );
+                Navigator.of(context)
+                    .popUntil((Route<void> route) => route.isFirst);
                 homeScreenKey.currentState?.showContactOnMap(contact);
               },
               icon: const Icon(Icons.map_outlined),
