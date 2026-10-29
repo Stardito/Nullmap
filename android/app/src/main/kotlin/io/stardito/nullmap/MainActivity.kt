@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.util.Log
 import com.amap.api.location.AMapLocation
@@ -50,6 +51,9 @@ class MainActivity : FlutterActivity() {
     /** 等待文件选择器返回的调用方。 */
     private var pendingImport: MethodChannel.Result? = null
 
+    /** 等待通讯录权限结果的调用方。 */
+    private var pendingContacts: MethodChannel.Result? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 隐私声明必须早于任何高德 SDK 调用（包括只查地址时创建定位客户端）。
@@ -57,9 +61,30 @@ class MainActivity : FlutterActivity() {
             MapsInitializer.updatePrivacyShow(applicationContext, true, true)
             MapsInitializer.updatePrivacyAgree(applicationContext, true)
         }
-        // 启动时不再主动申请定位：地图视图首次需要定位时才申请一次（见 AmapView.ensureLocation），
-        // 用户拒绝后也不会每次进 App 再弹窗。「始终允许」后台定位只在地区提醒的说明里提示，
-        // 因为地区检测只在回到前台时执行，不需要后台常驻权限。
+        // 首次启动（或升级后还没被问过）主动申请一次定位权限；之后不再自动弹窗，
+        // 用户点定位按钮时才会再次申请。
+        requestLocationPermissionIfNeeded()
+    }
+
+    private fun requestLocationPermissionIfNeeded() {
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val prefs = getSharedPreferences(AmapPlatformView.PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(AmapPlatformView.KEY_PERMISSION_ASKED, false)) {
+            return
+        }
+        prefs.edit().putBoolean(AmapPlatformView.KEY_PERMISSION_ASKED, true).apply()
+        Log.d(AmapPlatformView.TAG, "request location permission at launch")
+        requestPermissions(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
+            AmapPlatformView.REQ_LOCATION,
+        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -67,6 +92,7 @@ class MainActivity : FlutterActivity() {
         flutterEngine.platformViewsController.registry
             .registerViewFactory("io.stardito.nullmap/amap", AmapViewFactory())
         configureSecurityChannel(flutterEngine)
+        configureDeviceChannel(flutterEngine)
 
         // 地图操作通道：定位回中、地点搜索、跳转到搜索结果、行政区划与地点候选。
         val channel = MethodChannel(
@@ -188,6 +214,17 @@ class MainActivity : FlutterActivity() {
         if (requestCode == AmapPlatformView.REQ_LOCATION) {
             val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
             AmapViewBridge.current?.onPermissionResult(granted)
+            return
+        }
+        if (requestCode == REQ_CONTACTS) {
+            val callback = pendingContacts
+            pendingContacts = null
+            val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
+            if (granted) {
+                callback?.success(readDeviceContacts())
+            } else {
+                callback?.error("permission", "通讯录权限被拒绝", null)
+            }
         }
     }
 
@@ -252,6 +289,91 @@ class MainActivity : FlutterActivity() {
 
     private fun keyguard(): KeyguardManager? =
         getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+
+    /** 手机通讯录读取通道：先运行时申请 READ_CONTACTS，再把结果回给 Flutter。 */
+    private fun configureDeviceChannel(flutterEngine: FlutterEngine) {
+        val channel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DEVICE_CHANNEL,
+        )
+        channel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "readContacts" -> {
+                    if (checkSelfPermission(Manifest.permission.READ_CONTACTS) ==
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        result.success(readDeviceContacts())
+                    } else {
+                        pendingContacts = result
+                        requestPermissions(
+                            arrayOf(Manifest.permission.READ_CONTACTS),
+                            REQ_CONTACTS,
+                        )
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    /** 读出手机联系人：按 contactId 聚合姓名与号码（最多 5 个号码）。 */
+    private fun readDeviceContacts(): List<Map<String, Any?>> {
+        val grouped = LinkedHashMap<Long, MutableMap<String, Any?>>()
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+        )
+        runCatching {
+            contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                null,
+                null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " COLLATE LOCALIZED ASC",
+            )?.use { cursor ->
+                val idIndex =
+                    cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+                val nameIndex =
+                    cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numberIndex =
+                    cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idIndex)
+                    val name = cursor.getString(nameIndex)?.trim().orEmpty()
+                    val number = cursor.getString(numberIndex)?.trim().orEmpty()
+                    if (number.isEmpty()) {
+                        continue
+                    }
+                    val entry = grouped.getOrPut(id) {
+                        mutableMapOf<String, Any?>(
+                            "id" to id.toString(),
+                            "name" to name,
+                            "phones" to mutableListOf<String>(),
+                        )
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val phones = entry["phones"] as MutableList<String>
+                    if (!phones.contains(number) && phones.size < 5) {
+                        phones.add(number)
+                    }
+                }
+            }
+        }.onFailure { error ->
+            Log.w(AmapPlatformView.TAG, "read contacts failed", error)
+        }
+        return grouped.values
+            .map { entry ->
+                mapOf(
+                    "id" to entry["id"],
+                    "name" to entry["name"],
+                    "phones" to entry["phones"],
+                )
+            }
+            .filter { entry -> (entry["phones"] as? List<*>)?.isNotEmpty() == true }
+            .sortedBy { entry -> "${entry["name"]}".lowercase() }
+    }
 
     /**
      * 拉起系统「确认锁屏密码」页面完成验证。
@@ -765,11 +887,17 @@ class MainActivity : FlutterActivity() {
         const val AMAP_CHANNEL = "io.stardito.nullmap/amap"
         const val SECURITY_CHANNEL = "io.stardito.nullmap/security"
 
+        /** 设备数据通道：读取手机通讯录。 */
+        const val DEVICE_CHANNEL = "io.stardito.nullmap/device"
+
         /** 系统屏幕锁验证页。 */
         const val REQ_AUTH = 4401
 
         /** 系统文件选择器（导入备份）。 */
         const val REQ_IMPORT = 4402
+
+        /** 通讯录读取权限。 */
+        const val REQ_CONTACTS = 4501
 
         /** 附近检索半径：50 公里。 */
         const val NEARBY_SEARCH_RADIUS_METERS = 50000

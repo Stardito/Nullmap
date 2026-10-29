@@ -204,5 +204,30 @@
   "privacyMapUnlock": "Verify and view",
   "privacyCallReason": "Verify before calling",
   "contactTagExisting": "Existing tags",
-  "contactAddressAutoHint": "Province / city / district fill in automatically from a full address"
+  "contactAddressAutoHint": "Province / city / district fill in automatically from a full address",
+  "contactsImport": "Import from phone",
+  "importContactsTitle": "Import phone contacts",
+  "importContactsHint": "Search name or number",
+  "importContactsEmpty": "No contacts to import",
+  "importContactsDenied": "Contacts permission is required to import",
+  "importContactsGrant": "Grant permission",
+  "importContactsExisting": "already added",
+  "importContactsSelectAll": "Select all",
+  "importContactsClear": "Clear",
+  "importContactsAction": "Import {count}",
+  "@importContactsAction": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importContactsDone": "Imported {count} contacts",
+  "@importContactsDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

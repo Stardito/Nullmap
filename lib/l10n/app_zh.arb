@@ -204,5 +204,30 @@
   "privacyMapUnlock": "验证并查看",
   "privacyCallReason": "验证后拨打",
   "contactTagExisting": "已有标签",
-  "contactAddressAutoHint": "输入完整地址后，省 / 市 / 区会自动补全"
+  "contactAddressAutoHint": "输入完整地址后，省 / 市 / 区会自动补全",
+  "contactsImport": "从手机导入",
+  "importContactsTitle": "导入手机联系人",
+  "importContactsHint": "搜索姓名或号码",
+  "importContactsEmpty": "通讯录里没有可导入的联系人",
+  "importContactsDenied": "需要通讯录权限才能导入联系人",
+  "importContactsGrant": "授予权限",
+  "importContactsExisting": "已在本地",
+  "importContactsSelectAll": "全选",
+  "importContactsClear": "清除",
+  "importContactsAction": "导入 {count} 位",
+  "@importContactsAction": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importContactsDone": "已导入 {count} 位联系人",
+  "@importContactsDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

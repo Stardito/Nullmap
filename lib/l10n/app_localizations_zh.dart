@@ -452,4 +452,41 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contactAddressAutoHint => '输入完整地址后，省 / 市 / 区会自动补全';
+
+  @override
+  String get contactsImport => '从手机导入';
+
+  @override
+  String get importContactsTitle => '导入手机联系人';
+
+  @override
+  String get importContactsHint => '搜索姓名或号码';
+
+  @override
+  String get importContactsEmpty => '通讯录里没有可导入的联系人';
+
+  @override
+  String get importContactsDenied => '需要通讯录权限才能导入联系人';
+
+  @override
+  String get importContactsGrant => '授予权限';
+
+  @override
+  String get importContactsExisting => '已在本地';
+
+  @override
+  String get importContactsSelectAll => '全选';
+
+  @override
+  String get importContactsClear => '清除';
+
+  @override
+  String importContactsAction(int count) {
+    return '导入 $count 位';
+  }
+
+  @override
+  String importContactsDone(int count) {
+    return '已导入 $count 位联系人';
+  }
 }

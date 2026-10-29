@@ -540,7 +540,7 @@ internal class AmapPlatformView(
 
         /** 记录「已自动申请过一次定位权限」，避免每次启动都弹窗。 */
         const val PREFS_NAME = "nullmap_permissions"
-        const val KEY_PERMISSION_ASKED = "location_permission_asked"
+        const val KEY_PERMISSION_ASKED = "location_permission_asked_v2"
 
         /** 后台定位权限：用于"所在城市变了"提醒。 */
 

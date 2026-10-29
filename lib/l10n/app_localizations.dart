@@ -949,6 +949,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'输入完整地址后，省 / 市 / 区会自动补全'**
   String get contactAddressAutoHint;
+
+  /// No description provided for @contactsImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'从手机导入'**
+  String get contactsImport;
+
+  /// No description provided for @importContactsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入手机联系人'**
+  String get importContactsTitle;
+
+  /// No description provided for @importContactsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索姓名或号码'**
+  String get importContactsHint;
+
+  /// No description provided for @importContactsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'通讯录里没有可导入的联系人'**
+  String get importContactsEmpty;
+
+  /// No description provided for @importContactsDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要通讯录权限才能导入联系人'**
+  String get importContactsDenied;
+
+  /// No description provided for @importContactsGrant.
+  ///
+  /// In zh, this message translates to:
+  /// **'授予权限'**
+  String get importContactsGrant;
+
+  /// No description provided for @importContactsExisting.
+  ///
+  /// In zh, this message translates to:
+  /// **'已在本地'**
+  String get importContactsExisting;
+
+  /// No description provided for @importContactsSelectAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全选'**
+  String get importContactsSelectAll;
+
+  /// No description provided for @importContactsClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除'**
+  String get importContactsClear;
+
+  /// No description provided for @importContactsAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入 {count} 位'**
+  String importContactsAction(int count);
+
+  /// No description provided for @importContactsDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {count} 位联系人'**
+  String importContactsDone(int count);
 }
 
 class _AppLocalizationsDelegate

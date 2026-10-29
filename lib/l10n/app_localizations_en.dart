@@ -468,4 +468,42 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get contactAddressAutoHint =>
       'Province / city / district fill in automatically from a full address';
+
+  @override
+  String get contactsImport => 'Import from phone';
+
+  @override
+  String get importContactsTitle => 'Import phone contacts';
+
+  @override
+  String get importContactsHint => 'Search name or number';
+
+  @override
+  String get importContactsEmpty => 'No contacts to import';
+
+  @override
+  String get importContactsDenied =>
+      'Contacts permission is required to import';
+
+  @override
+  String get importContactsGrant => 'Grant permission';
+
+  @override
+  String get importContactsExisting => 'already added';
+
+  @override
+  String get importContactsSelectAll => 'Select all';
+
+  @override
+  String get importContactsClear => 'Clear';
+
+  @override
+  String importContactsAction(int count) {
+    return 'Import $count';
+  }
+
+  @override
+  String importContactsDone(int count) {
+    return 'Imported $count contacts';
+  }
 }

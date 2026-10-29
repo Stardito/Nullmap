@@ -8,6 +8,7 @@ import '../services/region_alerts.dart';
 import '../widgets/privacy_lock_button.dart';
 import 'contact_edit_page.dart';
 import 'contacts_page.dart';
+import 'import_contacts_page.dart';
 import 'map_page.dart';
 import 'settings_page.dart';
 
@@ -54,8 +55,17 @@ class HomeScreenState extends State<HomeScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(titles[_index]),
-        // 联系人页右上角放「上锁 / 解锁」；开启隐私锁后才有内容。
-        actions: _index == 1 ? const <Widget>[PrivacyLockButton()] : null,
+        actions: _index == 1
+            ? <Widget>[
+                IconButton(
+                  tooltip: l10n.contactsImport,
+                  icon: const Icon(Icons.contact_page_outlined),
+                  onPressed: _importPhoneContacts,
+                ),
+                // 联系人页右上角放「上锁 / 解锁」；开启隐私锁后才有内容。
+                const PrivacyLockButton(),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: Stack(
@@ -151,6 +161,17 @@ class HomeScreenState extends State<HomeScreen> {
     );
     if (saved == true && mounted) {
       _toast(l10n.contactsSaved);
+    }
+  }
+
+  /// 打开「从手机导入联系人」：列表勾选后写入本地。
+  Future<void> _importPhoneContacts() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final int? added = await Navigator.of(context).push<int>(
+      MaterialPageRoute<int>(builder: (_) => const ImportContactsPage()),
+    );
+    if (added != null && added > 0 && mounted) {
+      _toast(l10n.importContactsDone(added));
     }
   }
 
