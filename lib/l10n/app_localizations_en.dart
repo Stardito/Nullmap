@@ -464,4 +464,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactTagExisting => 'Existing tags';
+
+  @override
+  String get contactAddressAutoHint =>
+      'Province / city / district fill in automatically from a full address';
 }

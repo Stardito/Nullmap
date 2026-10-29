@@ -203,5 +203,6 @@
   "privacyMapLockedBody": "Privacy lock is on. Verify to see the map and contact pins.",
   "privacyMapUnlock": "Verify and view",
   "privacyCallReason": "Verify before calling",
-  "contactTagExisting": "Existing tags"
+  "contactTagExisting": "Existing tags",
+  "contactAddressAutoHint": "Province / city / district fill in automatically from a full address"
 }

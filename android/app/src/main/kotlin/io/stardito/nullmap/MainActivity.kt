@@ -142,6 +142,17 @@ class MainActivity : FlutterActivity() {
 
                 "currentAddress" -> requestCurrentAddress(result)
 
+                // 详细地址 → 省/市/区 + 坐标，用于「只输详细地址，自动补全行政区」。
+                "geocodeDetail" -> {
+                    val address = call.argument<String>("address")?.trim().orEmpty()
+                    val city = call.argument<String>("city")?.trim().orEmpty()
+                    if (address.isEmpty() || !amapReady) {
+                        result.success(null)
+                    } else {
+                        geocodeDetail(address, city, result::success)
+                    }
+                }
+
                 "contacts" -> {
                     val raw = call.argument<List<Map<String, Any?>>>("pins").orEmpty()
                     val pins = raw.mapNotNull { item ->
@@ -497,6 +508,56 @@ class MainActivity : FlutterActivity() {
         } catch (error: Exception) {
             Log.w(AmapPlatformView.TAG, "geocode error", error)
             callback(emptyList())
+        }
+    }
+
+    /** 地址 → 省市区 + 坐标：用于「只输详细地址，自动补省市区」。 */
+    private fun geocodeDetail(
+        keyword: String,
+        city: String,
+        callback: (Map<String, Any?>?) -> Unit,
+    ) {
+        try {
+            val search = GeocodeSearch(applicationContext)
+            search.setOnGeocodeSearchListener(
+                object : GeocodeSearch.OnGeocodeSearchListener {
+                    override fun onRegeocodeSearched(
+                        regeocodeResult: RegeocodeResult?,
+                        code: Int,
+                    ) {
+                        // 只做正向地理编码。
+                    }
+
+                    override fun onGeocodeSearched(geocodeResult: GeocodeResult?, code: Int) {
+                        val address = if (code == AMapException.CODE_AMAP_SUCCESS) {
+                            geocodeResult?.geocodeAddressList?.firstOrNull()
+                        } else {
+                            Log.w(AmapPlatformView.TAG, "geocodeDetail failed code=$code")
+                            null
+                        }
+                        val point: LatLonPoint? = address?.latLonPoint
+                        val payload: Map<String, Any?>? = if (address == null) {
+                            null
+                        } else {
+                            mapOf(
+                                "province" to address.province.orEmpty(),
+                                "city" to address.city.orEmpty(),
+                                "district" to address.district.orEmpty(),
+                                "address" to (address.formatAddress ?: keyword),
+                                "latitude" to (point?.latitude ?: 0.0),
+                                "longitude" to (point?.longitude ?: 0.0),
+                            )
+                        }
+                        runOnUiThread { callback(payload) }
+                    }
+                },
+            )
+            search.getFromLocationNameAsyn(
+                GeocodeQuery(keyword, if (city.isEmpty()) "" else city),
+            )
+        } catch (error: Exception) {
+            Log.w(AmapPlatformView.TAG, "geocodeDetail error", error)
+            callback(null)
         }
     }
 

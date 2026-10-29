@@ -449,4 +449,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contactTagExisting => '已有标签';
+
+  @override
+  String get contactAddressAutoHint => '输入完整地址后，省 / 市 / 区会自动补全';
 }

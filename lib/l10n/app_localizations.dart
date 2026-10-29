@@ -943,6 +943,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已有标签'**
   String get contactTagExisting;
+
+  /// No description provided for @contactAddressAutoHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入完整地址后，省 / 市 / 区会自动补全'**
+  String get contactAddressAutoHint;
 }
 
 class _AppLocalizationsDelegate

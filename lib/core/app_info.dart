@@ -11,10 +11,10 @@ abstract final class AppInfo {
   static const String appNameFull = '零点地图-NullMap';
 
   /// 语义化版本号，与 pubspec.yaml 的 `version:` 前半段一致。
-  static const String version = '1.1.1';
+  static const String version = '1.1.2';
 
   /// 构建号，与 pubspec.yaml 的 `version:` 后半段一致。
-  static const String buildNumber = '19';
+  static const String buildNumber = '20';
 
   /// 形如 `0.1.0 (2)`，用于「关于」页面展示。
   static const String versionLabel = '$version ($buildNumber)';

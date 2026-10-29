@@ -39,6 +39,9 @@ class _ContactEditPageState extends State<ContactEditPage> {
   /// QQ 失焦后重建头像预览，立即加载该 QQ 号的头像。
   final FocusNode _qqFocus = FocusNode();
 
+  /// 详细地址失焦后做一次地理编码，自动补全省/市/区。
+  final FocusNode _addressFocus = FocusNode();
+
   String _country = '中国';
   String _province = '';
   String _city = '';
@@ -86,6 +89,7 @@ class _ContactEditPageState extends State<ContactEditPage> {
       ..clear()
       ..addAll(contact?.tags ?? const <String>[]);
     _qqFocus.addListener(_onQqFocusChanged);
+    _addressFocus.addListener(_onAddressFocusChanged);
   }
 
   @override
@@ -93,6 +97,8 @@ class _ContactEditPageState extends State<ContactEditPage> {
     _tipsDebounce?.cancel();
     _qqFocus.removeListener(_onQqFocusChanged);
     _qqFocus.dispose();
+    _addressFocus.removeListener(_onAddressFocusChanged);
+    _addressFocus.dispose();
     _name.dispose();
     _nickname.dispose();
     _qq.dispose();
@@ -111,6 +117,58 @@ class _ContactEditPageState extends State<ContactEditPage> {
 
   /// 中国（含港澳台）才使用省/市/区三级行政区；其他国家只填详细地址。
   bool get _isDomestic => _country.trim().startsWith('中国');
+
+  void _onAddressFocusChanged() {
+    if (!_addressFocus.hasFocus && mounted) {
+      _autoFillRegion();
+    }
+  }
+
+  /// 详细地址填好后自动补全省/市/区（只补空的，不覆盖已手选的）。
+  Future<void> _autoFillRegion() async {
+    if (!_isDomestic) {
+      return;
+    }
+    final String text = _address.text.trim();
+    if (text.isEmpty) {
+      return;
+    }
+    final bool needRegion =
+        _province.isEmpty || _city.isEmpty || _district.isEmpty;
+    if (!needRegion) {
+      return;
+    }
+    final ({
+      String province,
+      String city,
+      String district,
+      double latitude,
+      double longitude,
+    })?
+    detail = await AmapService.geocodeDetail(text, city: _city);
+    if (detail == null || !mounted) {
+      return;
+    }
+    // 用户可能已经改了地址，结果过期就丢掉。
+    if (_address.text.trim() != text) {
+      return;
+    }
+    setState(() {
+      if (_province.isEmpty && detail.province.isNotEmpty) {
+        _province = detail.province;
+      }
+      if (_city.isEmpty && detail.city.isNotEmpty) {
+        _city = detail.city;
+      }
+      if (_district.isEmpty && detail.district.isNotEmpty) {
+        _district = detail.district;
+      }
+      if (_latitude == null && detail.latitude != 0) {
+        _latitude = detail.latitude;
+        _longitude = detail.longitude;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,9 +293,13 @@ class _ContactEditPageState extends State<ContactEditPage> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: TextField(
                 controller: _address,
+                focusNode: _addressFocus,
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   labelText: l10n.contactAddress,
                   hintText: l10n.contactAddressHint,
+                  helperText: _isDomestic ? l10n.contactAddressAutoHint : null,
+                  helperMaxLines: 2,
                   border: const OutlineInputBorder(),
                   suffixIcon: _tipsLoading
                       ? const Padding(
@@ -251,6 +313,7 @@ class _ContactEditPageState extends State<ContactEditPage> {
                       : null,
                 ),
                 onChanged: _onAddressChanged,
+                onSubmitted: (String _) => _autoFillRegion(),
               ),
             ),
             if (_addressTips.isNotEmpty)
@@ -458,6 +521,8 @@ class _ContactEditPageState extends State<ContactEditPage> {
       _longitude = place.longitude;
       _addressTips = <AmapPlace>[];
     });
+    // 选中候选后顺手把省市区补上（只补空的）。
+    _autoFillRegion();
   }
 
   /// 添加标签：已有标签可直接点选，也可以手输一个新的。
@@ -540,6 +605,11 @@ class _ContactEditPageState extends State<ContactEditPage> {
 
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ContactStore store = ContactScope.of(context);
+    // 只填了详细地址就保存时，先把省市区补齐（失焦的地理编码可能还没回来）。
+    if (_isDomestic && _address.text.trim().isNotEmpty) {
+      await _autoFillRegion();
+    }
     final String name = _name.text.trim();
     final String nickname = _nickname.text.trim();
     final String qq = _qq.text.trim();
@@ -558,7 +628,6 @@ class _ContactEditPageState extends State<ContactEditPage> {
       return;
     }
 
-    final ContactStore store = ContactScope.of(context);
     final String id = widget.contact?.id ?? store.newId();
     String avatarPath = _avatarPath;
     final File? picked = _pickedAvatar;

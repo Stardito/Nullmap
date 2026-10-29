@@ -189,6 +189,52 @@ class AmapService {
     }
   }
 
+  /// 地址 → 省/市/区与坐标；解析不出来返回 null。
+  static Future<
+    ({
+      String province,
+      String city,
+      String district,
+      double latitude,
+      double longitude,
+    })?
+  >
+  geocodeDetail(String address, {String city = ''}) async {
+    final String text = address.trim();
+    if (text.isEmpty || !isSupported) {
+      return null;
+    }
+    try {
+      final Map<Object?, Object?>? raw = await channel
+          .invokeMethod<Map<Object?, Object?>>(
+            'geocodeDetail',
+            <String, Object?>{'address': text, 'city': city.trim()},
+          );
+      if (raw == null) {
+        return null;
+      }
+      final String province = '${raw['province'] ?? ''}'.trim();
+      final String resolvedCity = '${raw['city'] ?? ''}'.trim();
+      final String district = '${raw['district'] ?? ''}'.trim();
+      final double latitude = (raw['latitude'] as num?)?.toDouble() ?? 0;
+      final double longitude = (raw['longitude'] as num?)?.toDouble() ?? 0;
+      if (province.isEmpty && resolvedCity.isEmpty && district.isEmpty) {
+        return null;
+      }
+      return (
+        province: province,
+        city: resolvedCity,
+        district: district,
+        latitude: latitude,
+        longitude: longitude,
+      );
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
   /// 定位按钮：回到设备当前位置，返回 `moved` / `locating` / `permission` 等状态。
   static Future<String> recenter() async {
     if (!isSupported) {
