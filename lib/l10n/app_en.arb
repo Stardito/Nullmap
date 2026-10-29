@@ -1,0 +1,149 @@
+{
+  "@@locale": "en",
+  "navMap": "Map",
+  "navContacts": "Contacts",
+  "navSettings": "Settings",
+  "mapSearchHint": "Search places",
+  "mapSearchEmpty": "No places found",
+  "mapDistanceAway": "{distance} away",
+  "mapLayerHint": "Switch map style in Settings",
+  "@mapDistanceAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapSearchFailed": "Search failed. Try again later.",
+  "mapSearchJumped": "Moved to “{title}”",
+  "@mapSearchJumped": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mapLocateTooltip": "Locate",
+  "mapLocateBack": "Back to current location",
+  "mapLocatePending": "Locating…",
+  "mapLocateStarting": "Map is still loading. Try again in a moment.",
+  "mapLocateUnavailable": "Cannot get location. Check location permission and system location switch.",
+  "mapLocateUnsupported": "Location is not supported on this device. Run on an arm64 device.",
+  "contactsSearchHint": "Search name, QQ, WeChat, phone or location",
+  "contactsEmpty": "No matching contacts",
+  "contactsEmptyList": "No contacts yet. Tap the button at bottom right to add one.",
+  "contactsAdd": "New contact",
+  "contactsEdit": "Edit",
+  "contactsDelete": "Delete",
+  "contactsDeleteTitle": "Delete contact",
+  "contactsDeleteBody": "Delete “{name}”? This cannot be undone.",
+  "@contactsDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contactsSaved": "Saved",
+  "contactsDeleted": "Deleted",
+  "contactsCancel": "Cancel",
+  "contactsSave": "Save",
+  "contactName": "Name",
+  "contactNickname": "Nickname",
+  "contactQq": "QQ",
+  "contactWechat": "WeChat",
+  "contactPhone": "Phone",
+  "contactLocation": "Location",
+  "contactCountry": "Country",
+  "contactProvince": "Province",
+  "contactCity": "City",
+  "contactDistrict": "District",
+  "contactAddress": "Address",
+  "contactAddressHint": "Building / street, pick from suggestions",
+  "locationPickTitle": "Choose {label}",
+  "@locationPickTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "locationPickEmpty": "No candidates. Check your network and retry.",
+  "locationPickUnsupported": "AMap candidates are Android-only",
+  "contactAvatar": "Avatar",
+  "contactAvatarPick": "Choose image",
+  "contactAvatarQq": "Use QQ avatar",
+  "contactAvatarMissing": "No avatar yet",
+  "contactQqOpen": "Open QQ profile",
+  "contactQqOpenFailed": "QQ is not installed or cannot be opened",
+  "contactCall": "Call",
+  "contactNotFilled": "Not set",
+  "contactNeedOne": "Fill in at least one field: name, nickname, QQ, WeChat or phone",
+  "settingsGeneral": "General",
+  "settingsLanguage": "Language",
+  "settingsLanguageDialogTitle": "Language",
+  "settingsLanguageSystem": "Follow system",
+  "settingsLanguageChinese": "简体中文",
+  "settingsLanguageEnglish": "English",
+  "settingsAppearance": "Appearance & display",
+  "appearanceTheme": "Theme",
+  "appearanceThemeMode": "Appearance",
+  "themeModeSystem": "System",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "appearanceThemeColor": "Theme color",
+  "themeColorDynamic": "Wallpaper",
+  "themeColorBlue": "Blue",
+  "themeColorGreen": "Green",
+  "themeColorOrange": "Orange",
+  "themeColorPurple": "Purple",
+  "themeColorTeal": "Teal",
+  "themeColorRed": "Red",
+  "settingsMapGroup": "Map",
+  "settingsMapStyle": "Map style",
+  "mapStyleStandard": "Standard",
+  "mapStyleSatellite": "Satellite",
+  "mapStyleTerrain": "Terrain",
+  "settingsAbout": "About",
+  "aboutAppName": "App name",
+  "aboutAppVersion": "Version",
+  "aboutDeveloper": "Developer",
+  "aboutRepository": "Repository",
+  "aboutLicenses": "Open-source licenses",
+  "mapContactsTitle": "Choose a contact",
+  "mapContactOverview": "Contact overview",
+  "contactViewDetail": "View contact details",
+  "mapSearchContactsHint": "Search contacts",
+  "mapSearchContactsEmpty": "No matching contacts",
+  "mapContactNoLocation": "This contact has no coordinates yet",
+  "contactManualInput": "Enter manually",
+  "contactManualInputHint": "Enter a name",
+  "contactCountryCommon": "Common countries/regions",
+  "contactViewOnMap": "View on map",
+  "contactsFilterAll": "All",
+  "settingsRegionAlerts": "Region alerts",
+  "settingsRegionAlertsSubtitle": "Tell me how many contacts are nearby when my region changes",
+  "settingsRegionGranularity": "Match level",
+  "regionGranularityProvince": "Province",
+  "regionGranularityCity": "City",
+  "regionGranularityDistrict": "District",
+  "regionAlertTitle": "{count} contacts in {region}",
+  "regionAlertBody": "Tap to view and filter contacts in {region}",
+  "@regionAlertTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "region": {
+        "type": "String"
+      }
+    }
+  },
+  "@regionAlertBody": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      }
+    }
+  }
+}

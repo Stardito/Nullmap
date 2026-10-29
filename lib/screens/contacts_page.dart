@@ -1,6 +1,19 @@
+import 'dart:typed_data';
+
 import 'package:material_ui/material_ui.dart';
 
-/// 联系人页：搜索 + 列表 + 详情。
+import '../data/contact.dart';
+import '../data/contact_store.dart';
+import '../l10n/app_localizations.dart';
+import '../services/avatar_bytes.dart';
+import '../services/external_apps.dart';
+import '../services/monet.dart';
+import '../services/region_alerts.dart';
+import '../widgets/contact_avatar.dart';
+import 'contact_edit_page.dart';
+import 'home_screen.dart';
+
+/// 联系人列表：支持按姓名 / 昵称 / QQ / 微信 / 手机号 / 所在地搜索。
 class ContactsPage extends StatefulWidget {
   const ContactsPage({super.key});
 
@@ -9,173 +22,611 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
-  static const List<Contact> _all = [
-    Contact('陈默', '138 0000 1234', '产品'),
-    Contact('林可', '139 1111 5678', '设计'),
-    Contact('周远', '137 2222 9012', '开发'),
-    Contact('苏晴', '136 3333 3456', '测试'),
-    Contact('何川', '135 4444 7890', '运维'),
-    Contact('许知', '134 5555 2345', '运营'),
-  ];
-
+  final TextEditingController _search = TextEditingController();
   String _query = '';
 
-  List<Contact> get _filtered => _query.isEmpty
-      ? _all
-      : _all
-            .where(
-              (Contact c) =>
-                  c.name.contains(_query) ||
-                  c.phone.replaceAll(' ', '').contains(_query) ||
-                  c.tag.contains(_query),
-            )
-            .toList();
+  /// 地区筛选：null 表示不限。
+  String? _filterCountry;
+  String? _filterProvince;
+  String? _filterCity;
+  String? _filterDistrict;
+
+  @override
+  void initState() {
+    super.initState();
+    regionSelectionRequest.addListener(_applyRegionRequest);
+  }
+
+  @override
+  void dispose() {
+    regionSelectionRequest.removeListener(_applyRegionRequest);
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// 通知点击后套用地区筛选（国家不限，省/市按通知带来的值）。
+  void _applyRegionRequest() {
+    final RegionSelection? selection = regionSelectionRequest.value;
+    if (!mounted || selection == null) {
+      return;
+    }
+    setState(() {
+      _filterCountry = null;
+      _filterProvince = selection.province.isEmpty
+          ? null
+          : selection.province;
+      _filterCity = selection.city.isEmpty ? null : selection.city;
+      _filterDistrict = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final List<Contact> items = _filtered;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final List<Contact> contacts = ContactScope.of(context).contacts;
+
+    String countryOf(Contact contact) {
+      final String value = contact.country.trim();
+      return value.isEmpty ? '中国' : value;
+    }
+
+    bool inCountry(Contact contact) =>
+        _filterCountry == null || countryOf(contact) == _filterCountry;
+
+    final List<String> countries =
+        <String>{for (final Contact c in contacts) countryOf(c)}.toList()
+          ..sort();
+    final List<String> provinces =
+        <String>{
+            for (final Contact c in contacts.where(inCountry))
+              if (c.province.trim().isNotEmpty) c.province.trim(),
+          }.toList()
+          ..sort();
+    final List<String> cities =
+        <String>{
+            for (final Contact c in contacts.where(inCountry))
+              if ((_filterProvince == null || c.province == _filterProvince) &&
+                  c.city.trim().isNotEmpty)
+                c.city.trim(),
+          }.toList()
+          ..sort();
+    final List<String> districts =
+        <String>{
+            for (final Contact c in contacts.where(inCountry))
+              if ((_filterProvince == null || c.province == _filterProvince) &&
+                  (_filterCity == null || c.city == _filterCity) &&
+                  c.district.trim().isNotEmpty)
+                c.district.trim(),
+          }.toList()
+          ..sort();
+
+    final List<Contact> visible = contacts.where((Contact contact) {
+      if (!inCountry(contact)) return false;
+      if (_filterProvince != null && contact.province != _filterProvince) {
+        return false;
+      }
+      if (_filterCity != null && contact.city != _filterCity) return false;
+      if (_filterDistrict != null && contact.district != _filterDistrict) {
+        return false;
+      }
+      if (_query.isNotEmpty && !_matches(contact, _query)) return false;
+      return true;
+    }).toList();
 
     return Column(
-      children: [
+      children: <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: SearchBar(
-            hintText: '搜索姓名、电话或分组',
+            controller: _search,
+            hintText: l10n.contactsSearchHint,
             leading: const Icon(Icons.search),
-            elevation: const WidgetStatePropertyAll(0),
-            onChanged: (String value) => setState(() => _query = value),
+            trailing: <Widget>[
+              if (_query.isNotEmpty)
+                IconButton(
+                  tooltip: l10n.contactsCancel,
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    _search.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+            ],
+            onChanged: (String value) =>
+                setState(() => _query = value.trim()),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: <Widget>[
+                _regionChip(
+                  label: l10n.contactCountry,
+                  value: _filterCountry,
+                  options: countries,
+                  onPicked: (String? value) {
+                    setState(() {
+                      _filterCountry = value;
+                      _filterProvince = null;
+                      _filterCity = null;
+                      _filterDistrict = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                _regionChip(
+                  label: l10n.contactProvince,
+                  value: _filterProvince,
+                  options: provinces,
+                  onPicked: (String? value) {
+                    setState(() {
+                      _filterProvince = value;
+                      _filterCity = null;
+                      _filterDistrict = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                _regionChip(
+                  label: l10n.contactCity,
+                  value: _filterCity,
+                  options: cities,
+                  onPicked: (String? value) {
+                    setState(() {
+                      _filterCity = value;
+                      _filterDistrict = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                _regionChip(
+                  label: l10n.contactDistrict,
+                  value: _filterDistrict,
+                  options: districts,
+                  onPicked: (String? value) {
+                    setState(() => _filterDistrict = value);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
-          child: items.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.person_search_outlined,
-                        size: 48,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(height: 12),
-                      Text('没有匹配的联系人', style: theme.textTheme.bodyLarge),
-                    ],
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+          child: visible.isEmpty
+              ? _EmptyState(isSearching: _query.isNotEmpty)
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                  itemCount: visible.length,
                   itemBuilder: (BuildContext context, int index) {
-                    final Contact c = items[index];
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          foregroundColor: theme.colorScheme.onPrimaryContainer,
-                          child: Text(c.name.characters.first),
-                        ),
-                        title: Text(c.name),
-                        subtitle: Text(c.phone),
-                        trailing: Chip(
-                          label: Text(c.tag),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ContactDetailPage(contact: c),
-                          ),
-                        ),
-                      ),
-                    );
+                    return _ContactTile(contact: visible[index]);
                   },
                 ),
         ),
       ],
     );
   }
+
+  bool _matches(Contact contact, String query) {
+    final String haystack = <String>[
+      contact.name,
+      contact.nickname,
+      contact.qq,
+      contact.wechat,
+      contact.phone,
+      contact.locationText,
+    ].join(' ').toLowerCase();
+    return haystack.contains(query.toLowerCase());
+  }
+
+  /// 一个地区筛选按钮：点开弹出候选项，选“全部”清除该级筛选。
+  Widget _regionChip({
+    required String label,
+    required String? value,
+    required List<String> options,
+    required ValueChanged<String?> onPicked,
+  }) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return FilterChip(
+      selected: value != null,
+      showCheckmark: false,
+      avatar: Icon(
+        value == null ? Icons.tune : Icons.place_outlined,
+        size: 18,
+      ),
+      label: Text('$label: ${value ?? l10n.contactsFilterAll}'),
+      onSelected: (_) => _pickRegion(
+        title: label,
+        options: options,
+        current: value,
+        onPicked: onPicked,
+      ),
+    );
+  }
+
+  Future<void> _pickRegion({
+    required String title,
+    required List<String> options,
+    required String? current,
+    required ValueChanged<String?> onPicked,
+  }) async {
+    if (options.isEmpty) return;
+    final String? picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext context) =>
+          _RegionSheet(title: title, options: options, current: current),
+    );
+    if (picked == null) return;
+    onPicked(picked.isEmpty ? null : picked);
+  }
 }
 
-/// 联系人数据。
-class Contact {
-  const Contact(this.name, this.phone, this.tag);
+/// 地区筛选候选项弹层；返回空字符串表示“全部”。
+class _RegionSheet extends StatelessWidget {
+  const _RegionSheet({
+    required this.title,
+    required this.options,
+    required this.current,
+  });
 
-  final String name;
-  final String phone;
-  final String tag;
+  final String title;
+  final List<String> options;
+  final String? current;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          ListTile(
+            leading: const Icon(Icons.done_all),
+            title: Text(l10n.contactsFilterAll),
+            trailing: current == null ? const Icon(Icons.check) : null,
+            onTap: () => Navigator.of(context).pop(''),
+          ),
+          for (final String option in options)
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: Text(option),
+              trailing: option == current ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.of(context).pop(option),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
-/// 联系人详情页。
-class ContactDetailPage extends StatelessWidget {
-  const ContactDetailPage({super.key, required this.contact});
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.isSearching});
+
+  final bool isSearching;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              isSearching ? Icons.search_off : Icons.people_outline,
+              size: 56,
+              color: scheme.outline,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isSearching ? l10n.contactsEmpty : l10n.contactsEmptyList,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.contact});
 
   final Contact contact;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Contact c = contact;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final List<String> details = <String>[
+      if (contact.phone.trim().isNotEmpty) contact.phone.trim(),
+      if (contact.locationText.isNotEmpty) contact.locationText,
+    ];
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        leading: ContactAvatar(contact: contact),
+        title: Text(
+          contact.displayName.isEmpty ? l10n.contactNotFilled : contact.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: details.isEmpty
+            ? null
+            : Text(
+                details.join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (BuildContext context) =>
+                ContactDetailPage(contactId: contact.id),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 联系人详情：展示所有字段，并提供打开 QQ 名片、拨号、编辑、删除。
+///
+/// 背景为「头像 Monet 取色 → 默认背景」的竖向渐变。
+class ContactDetailPage extends StatefulWidget {
+  const ContactDetailPage({super.key, required this.contactId});
+
+  final String contactId;
+
+  @override
+  State<ContactDetailPage> createState() => _ContactDetailPageState();
+}
+
+class _ContactDetailPageState extends State<ContactDetailPage> {
+  Color? _seed;
+  String _seedKey = '';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadSeed();
+  }
+
+  Future<void> _loadSeed() async {
+    final Contact? contact = ContactScope.of(context).byId(widget.contactId);
+    if (contact == null) {
+      return;
+    }
+    final String key = '${contact.id}|${contact.avatarPath}|${contact.qq}';
+    if (key == _seedKey) {
+      return;
+    }
+    _seedKey = key;
+    final Uint8List? bytes = await contactAvatarBytes(contact);
+    final Color? seed = bytes == null ? null : await monetColorFromImage(bytes);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _seed = seed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ContactStore store = ContactScope.of(context);
+    final Contact? contact = store.byId(widget.contactId);
+    if (contact == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.navContacts)),
+        body: Center(child: Text(l10n.contactsEmpty)),
+      );
+    }
+
+    final String location = contact.locationText;
+    final List<(String, String, String?)> rows = <(String, String, String?)>[
+      (l10n.contactName, contact.name, null),
+      (l10n.contactNickname, contact.nickname, null),
+      (l10n.contactQq, contact.qq, null),
+      (l10n.contactWechat, contact.wechat, null),
+      (l10n.contactPhone, contact.phone, l10n.contactCall),
+      (l10n.contactLocation, location, null),
+    ];
+
+    Future<void> delete() async {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: Text(l10n.contactsDeleteTitle),
+          content: Text(
+            l10n.contactsDeleteBody(
+              contact.displayName.isEmpty
+                  ? l10n.contactNotFilled
+                  : contact.displayName,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.contactsCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.contactsDelete),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) {
+        return;
+      }
+      store.remove(contact.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.contactsDeleted)));
+        Navigator.of(context).pop();
+      }
+    }
+
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    // 莫奈取色只做轻量点缀：10% 不透明度叠在默认背景上，避免整屏被颜色压住。
+    final Color tint = (_seed ?? scheme.primary).withValues(alpha: 0.30);
+    final Color start = Color.alphaBlend(tint, scheme.surface);
+    final Color onStart = scheme.onSurface;
 
     return Scaffold(
-      appBar: AppBar(title: Text(c.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const SizedBox(height: 8),
-          Center(
-            child: CircleAvatar(
-              radius: 48,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              foregroundColor: theme.colorScheme.onPrimaryContainer,
-              child: Text(
-                c.name.characters.first,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: onStart,
+        title: Text(
+          contact.displayName.isEmpty ? l10n.navContacts : contact.displayName,
+        ),
+        actions: <Widget>[
+          IconButton(
+            tooltip: l10n.contactsEdit,
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () async {
+              final bool? changed = await Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(
+                  builder: (BuildContext context) =>
+                      ContactEditPage(contact: contact),
                 ),
-              ),
-            ),
+              );
+              if (changed == true && context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.contactsSaved)));
+              }
+            },
           ),
-          const SizedBox(height: 16),
-          Center(child: Text(c.name, style: theme.textTheme.headlineSmall)),
-          const SizedBox(height: 4),
-          Center(
-            child: Text(
-              c.tag,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.phone_outlined),
-                  title: const Text('电话'),
-                  subtitle: Text(c.phone),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.mail_outline),
-                  title: Text('邮箱'),
-                  subtitle: Text('未填写'),
-                  trailing: Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.call),
-            label: const Text('拨打'),
+          IconButton(
+            tooltip: l10n.contactsDelete,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: delete,
           ),
         ],
       ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[start, scheme.surface],
+            stops: const <double>[0.0, 0.72],
+          ),
+        ),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            MediaQuery.paddingOf(context).top + 72,
+            16,
+            16,
+          ),
+          children: <Widget>[
+            Center(child: ContactAvatar(contact: contact, radius: 44)),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                contact.displayName.isEmpty
+                    ? l10n.contactNotFilled
+                    : contact.displayName,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: onStart),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Column(
+                children: <Widget>[
+                  for (int index = 0; index < rows.length; index++)
+                    _DetailRow(
+                      label: rows[index].$1,
+                      value: rows[index].$2,
+                      actionLabel: rows[index].$3,
+                      onAction: rows[index].$3 == null
+                          ? null
+                          : () => ExternalApps.call(contact.phone),
+                      last: index == rows.length - 1,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                Navigator.of(context).popUntil(
+                  (Route<void> route) => route.isFirst,
+                );
+                homeScreenKey.currentState?.showContactOnMap(contact);
+              },
+              icon: const Icon(Icons.map_outlined),
+              label: Text(l10n.contactViewOnMap),
+            ),
+            const SizedBox(height: 8),
+            if (contact.qq.trim().isNotEmpty)
+              FilledButton.icon(
+                onPressed: () async {
+                  final bool opened = await ExternalApps.openQqProfile(
+                    contact.qq,
+                  );
+                  if (!opened && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.contactQqOpenFailed)),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: Text(l10n.contactQqOpen),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.last,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String label;
+  final String value;
+  final bool last;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String shown = value.trim().isEmpty ? l10n.contactNotFilled : value;
+    return Column(
+      children: <Widget>[
+        ListTile(
+          title: Text(label),
+          subtitle: Text(shown),
+          trailing: actionLabel == null
+              ? null
+              : TextButton(onPressed: onAction, child: Text(actionLabel!)),
+        ),
+        if (!last) const Divider(height: 1, indent: 16, endIndent: 16),
+      ],
     );
   }
 }

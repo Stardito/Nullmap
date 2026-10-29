@@ -1,0 +1,149 @@
+{
+  "@@locale": "zh",
+  "navMap": "地图",
+  "navContacts": "联系人",
+  "navSettings": "设置",
+  "mapSearchHint": "搜索地点",
+  "mapSearchEmpty": "没有找到地点",
+  "mapDistanceAway": "距您 {distance}",
+  "mapLayerHint": "在设置中切换地图样式",
+  "@mapDistanceAway": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "mapSearchFailed": "搜索失败，请稍后重试",
+  "mapSearchJumped": "已定位到「{title}」",
+  "@mapSearchJumped": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mapLocateTooltip": "定位",
+  "mapLocateBack": "已回到当前位置",
+  "mapLocatePending": "正在定位…",
+  "mapLocateStarting": "地图还在加载，请稍后再试",
+  "mapLocateUnavailable": "无法获取位置，请检查定位权限与系统定位开关",
+  "mapLocateUnsupported": "当前设备不支持定位，请在 arm64 真机上运行",
+  "contactsSearchHint": "搜索姓名、QQ、微信、电话或所在地",
+  "contactsEmpty": "没有匹配的联系人",
+  "contactsEmptyList": "还没有联系人，点右下角新增",
+  "contactsAdd": "新增联系人",
+  "contactsEdit": "编辑",
+  "contactsDelete": "删除",
+  "contactsDeleteTitle": "删除联系人",
+  "contactsDeleteBody": "确定删除「{name}」吗？此操作不可撤销。",
+  "@contactsDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "contactsSaved": "已保存",
+  "contactsDeleted": "已删除",
+  "contactsCancel": "取消",
+  "contactsSave": "保存",
+  "contactName": "姓名",
+  "contactNickname": "昵称",
+  "contactQq": "QQ 号",
+  "contactWechat": "微信号",
+  "contactPhone": "手机号",
+  "contactLocation": "所在地",
+  "contactCountry": "国家",
+  "contactProvince": "省",
+  "contactCity": "市",
+  "contactDistrict": "区/县",
+  "contactAddress": "详细地址",
+  "contactAddressHint": "小区 / 楼宇 / 街道，可从候选中选择",
+  "locationPickTitle": "选择{label}",
+  "@locationPickTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "locationPickEmpty": "未获取到候选，请检查网络后重试",
+  "locationPickUnsupported": "仅 Android 支持高德候选",
+  "contactAvatar": "头像",
+  "contactAvatarPick": "选择图片",
+  "contactAvatarQq": "使用 QQ 头像",
+  "contactAvatarMissing": "还没有头像",
+  "contactQqOpen": "打开 QQ 名片",
+  "contactQqOpenFailed": "未安装 QQ 或无法打开",
+  "contactCall": "拨打",
+  "contactNotFilled": "未填写",
+  "contactNeedOne": "至少填写一项：姓名、昵称、QQ、微信或手机号",
+  "settingsGeneral": "通用",
+  "settingsLanguage": "显示语言",
+  "settingsLanguageDialogTitle": "显示语言",
+  "settingsLanguageSystem": "跟随系统",
+  "settingsLanguageChinese": "简体中文",
+  "settingsLanguageEnglish": "English",
+  "settingsAppearance": "外观与显示",
+  "appearanceTheme": "主题",
+  "appearanceThemeMode": "明暗模式",
+  "themeModeSystem": "跟随系统",
+  "themeModeLight": "浅色",
+  "themeModeDark": "深色",
+  "appearanceThemeColor": "主题颜色",
+  "themeColorDynamic": "跟随壁纸",
+  "themeColorBlue": "蓝色",
+  "themeColorGreen": "绿色",
+  "themeColorOrange": "橙色",
+  "themeColorPurple": "紫色",
+  "themeColorTeal": "青色",
+  "themeColorRed": "红色",
+  "settingsMapGroup": "地图",
+  "settingsMapStyle": "地图样式",
+  "mapStyleStandard": "标准",
+  "mapStyleSatellite": "卫星",
+  "mapStyleTerrain": "地形",
+  "settingsAbout": "关于项目",
+  "aboutAppName": "程序名",
+  "aboutAppVersion": "程序版本",
+  "aboutDeveloper": "开发者",
+  "aboutRepository": "开源仓库",
+  "aboutLicenses": "开源许可",
+  "mapContactsTitle": "选择联系人",
+  "mapContactOverview": "联系人概览",
+  "contactViewDetail": "查看联系人详情",
+  "mapSearchContactsHint": "搜索联系人",
+  "mapSearchContactsEmpty": "没有匹配的联系人",
+  "mapContactNoLocation": "该联系人还没有坐标，无法定位",
+  "contactManualInput": "手动输入",
+  "contactManualInputHint": "输入名称",
+  "contactCountryCommon": "常用国家/地区",
+  "contactViewOnMap": "在地图上查看",
+  "contactsFilterAll": "全部",
+  "settingsRegionAlerts": "所在地区提醒",
+  "settingsRegionAlertsSubtitle": "定位到的地区变化时，告诉你那里有多少位联系人",
+  "settingsRegionGranularity": "判断粒度",
+  "regionGranularityProvince": "省",
+  "regionGranularityCity": "市",
+  "regionGranularityDistrict": "区",
+  "regionAlertTitle": "{count} 位联系人在{region}",
+  "regionAlertBody": "点击查看并筛选{region}的联系人",
+  "@regionAlertTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "region": {
+        "type": "String"
+      }
+    }
+  },
+  "@regionAlertBody": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      }
+    }
+  }
+}
